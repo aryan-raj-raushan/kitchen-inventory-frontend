@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm, type Resolver } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ICoupon, CreateCouponRequest } from '@/types';
@@ -38,7 +38,8 @@ export function CouponForm({ initial, onSubmit, isSaving, error, onCancel }: Cou
     watch,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema) as Resolver<FormValues>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(schema) as any,
     defaultValues: initial
       ? {
           code: initial.code,
@@ -79,7 +80,7 @@ export function CouponForm({ initial, onSubmit, isSaving, error, onCancel }: Cou
 
       <div>
         <label className={labelClass}>Discount Type</label>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           {(['PERCENTAGE', 'FIXED_AMOUNT'] as const).map((t) => (
             <label key={t} className="flex items-center gap-2 cursor-pointer text-sm">
               <input type="radio" {...register('discountType')} value={t} className="accent-indigo-600" />
@@ -104,7 +105,7 @@ export function CouponForm({ initial, onSubmit, isSaving, error, onCancel }: Cou
         {errors.discountValue && <p className={errClass}>{errors.discountValue.message}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={labelClass}>Start Date</label>
           <input type="date" {...register('startDate')} className={inputClass} />
@@ -123,18 +124,18 @@ export function CouponForm({ initial, onSubmit, isSaving, error, onCancel }: Cou
         {errors.maxUses && <p className={errClass}>{errors.maxUses.message}</p>}
       </div>
 
-      <div className="flex gap-3 pt-2">
+      <div className="flex flex-col sm:flex-row gap-3 pt-2">
         <button
           type="submit"
           disabled={isSaving}
-          className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          className="flex-1 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
         >
           {isSaving ? 'Saving…' : initial ? 'Save Changes' : 'Create Coupon'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="px-5 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+          className="flex-1 px-5 py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors"
         >
           Cancel
         </button>

@@ -6,18 +6,16 @@ import { validateBody } from '@/lib/validate';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { createOrder, getOrders } from '@/server/services/order.server.service';
 
+const OrderItemSchema = z.union([
+  z.object({ inventoryItemId: z.string().min(1), quantity: z.number().int().min(1) }),
+  z.object({ comboId: z.string().min(1), quantity: z.number().int().min(1) }),
+]);
+
 const CreateOrderSchema = z.object({
   customerName: z.string().min(1),
   customerPhone: z.string().min(1),
   couponCode: z.string().optional(),
-  items: z
-    .array(
-      z.object({
-        inventoryItemId: z.string().min(1),
-        quantity: z.number().int().min(1),
-      })
-    )
-    .min(1),
+  items: z.array(OrderItemSchema).min(1),
 });
 
 export const POST = withAuth(async (req: NextRequest): Promise<NextResponse> => {

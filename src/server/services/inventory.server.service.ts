@@ -14,11 +14,25 @@ function validateImageUrl(imageUrl: string): void {
   }
 }
 
-export async function getAll(filters?: { status?: string; categoryId?: string }) {
-  return repo.findAll(filters);
+async function resolveId(slugOrId: string): Promise<string> {
+  if (mongoose.Types.ObjectId.isValid(slugOrId)) return slugOrId;
+  const item = await repo.findBySlug(slugOrId);
+  if (!item) throw new NotFoundError('Inventory item not found');
+  return (item._id as mongoose.Types.ObjectId).toString();
 }
 
-export async function getById(id: string) {
+export async function getAll(filters?: { status?: string; categoryId?: string }) {
+  const items = await repo.findAll(filters);
+  // Backfill slugs for existing items that don't have one yet
+  const needsSlug = items.filter((item) => !item.slug);
+  if (needsSlug.length > 0) {
+    await Promise.all(needsSlug.map((item) => item.save()));
+  }
+  return items;
+}
+
+export async function getById(slugOrId: string) {
+  const id = await resolveId(slugOrId);
   const item = await repo.findById(id);
   if (!item) throw new NotFoundError('Inventory item not found');
   return item;
@@ -30,7 +44,8 @@ export async function create(dto: CreateInventoryItemRequest) {
   return repo.create(dto);
 }
 
-export async function update(id: string, dto: UpdateInventoryItemRequest) {
+export async function update(slugOrId: string, dto: UpdateInventoryItemRequest) {
+  const id = await resolveId(slugOrId);
   const item = await repo.findById(id);
   if (!item) throw new NotFoundError('Inventory item not found');
   if (dto.price !== undefined && dto.price < 0) throw new ValidationError('price must be >= 0');
@@ -40,7 +55,15 @@ export async function update(id: string, dto: UpdateInventoryItemRequest) {
   return updated;
 }
 
-export async function deactivate(id: string) {
+export async function remove(slugOrId: string) {
+  const id = await resolveId(slugOrId);
+  const item = await repo.remove(id);
+  if (!item) throw new NotFoundError('Inventory item not found');
+  return item;
+}
+
+export async function deactivate(slugOrId: string) {
+  const id = await resolveId(slugOrId);
   const item = await repo.deactivate(id);
   if (!item) throw new NotFoundError('Inventory item not found');
   return item;

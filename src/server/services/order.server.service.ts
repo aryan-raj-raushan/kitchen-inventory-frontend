@@ -1,6 +1,7 @@
 import 'server-only';
 import mongoose from 'mongoose';
 import { InventoryItem } from '../models/InventoryItem';
+import { Combo } from '../models/Combo';
 import { Coupon } from '../models/Coupon';
 import { StockMovement } from '../models/StockMovement';
 import { Invoice } from '../models/Invoice';
@@ -36,31 +37,69 @@ export async function createOrder(dto: CreateOrderRequest): Promise<IOrderDoc> {
       // 2. Validate each ordered item and compute subtotal
       let subtotal = 0;
       const orderItems = [];
+      // Track inventory deductions: { inventoryItemId, quantity, itemName }
+      const inventoryDeductions: Array<{ id: string; quantity: number; name: string }> = [];
 
-      for (const { inventoryItemId, quantity } of dto.items) {
-        if (!mongoose.Types.ObjectId.isValid(inventoryItemId)) {
-          throw new ValidationError(`Invalid inventory item ID: ${inventoryItemId}`);
-        }
+      for (const lineItem of dto.items) {
+        const quantity = lineItem.quantity;
 
-        const invItem = await InventoryItem.findById(inventoryItemId).session(session);
-        if (!invItem || invItem.status !== 'ACTIVE') {
-          throw new NotFoundError(`Inventory item not found or inactive: ${inventoryItemId}`);
+        if ('comboId' in lineItem) {
+          // --- Combo item ---
+          if (!mongoose.Types.ObjectId.isValid(lineItem.comboId)) {
+            throw new ValidationError(`Invalid combo ID: ${lineItem.comboId}`);
+          }
+          const combo = await Combo.findById(lineItem.comboId).session(session);
+          if (!combo || combo.status !== 'ACTIVE') {
+            throw new NotFoundError(`Combo not found or inactive: ${lineItem.comboId}`);
+          }
+          // Validate each component has enough stock
+          for (const comp of combo.components) {
+            const invItem = await InventoryItem.findById(comp.inventoryItemId).session(session);
+            if (!invItem || invItem.status !== 'ACTIVE') {
+              throw new NotFoundError(`Component "${comp.itemName}" not found or inactive`);
+            }
+            const needed = comp.quantity * quantity;
+            if (invItem.currentQuantity < needed) {
+              throw new ConflictError(
+                `Insufficient stock for "${comp.itemName}": need ${needed}, have ${invItem.currentQuantity}`
+              );
+            }
+            inventoryDeductions.push({ id: String(comp.inventoryItemId), quantity: needed, name: comp.itemName });
+          }
+          const itemSubtotal = combo.price * quantity;
+          subtotal += itemSubtotal;
+          orderItems.push({
+            itemName: combo.name,
+            quantity,
+            unitPrice: combo.price,
+            subtotal: itemSubtotal,
+          });
+        } else {
+          // --- Regular inventory item ---
+          const { inventoryItemId } = lineItem;
+          if (!mongoose.Types.ObjectId.isValid(inventoryItemId)) {
+            throw new ValidationError(`Invalid inventory item ID: ${inventoryItemId}`);
+          }
+          const invItem = await InventoryItem.findById(inventoryItemId).session(session);
+          if (!invItem || invItem.status !== 'ACTIVE') {
+            throw new NotFoundError(`Inventory item not found or inactive: ${inventoryItemId}`);
+          }
+          if (invItem.currentQuantity < quantity) {
+            throw new ConflictError(
+              `Insufficient stock for "${invItem.name}": requested ${quantity}, available ${invItem.currentQuantity}`
+            );
+          }
+          inventoryDeductions.push({ id: inventoryItemId, quantity, name: invItem.name });
+          const itemSubtotal = invItem.price * quantity;
+          subtotal += itemSubtotal;
+          orderItems.push({
+            inventoryItemId: invItem._id,
+            itemName: invItem.name,
+            quantity,
+            unitPrice: invItem.price,
+            subtotal: itemSubtotal,
+          });
         }
-        if (invItem.currentQuantity < quantity) {
-          throw new ConflictError(
-            `Insufficient stock for "${invItem.name}": requested ${quantity}, available ${invItem.currentQuantity}`
-          );
-        }
-
-        const itemSubtotal = invItem.price * quantity;
-        subtotal += itemSubtotal;
-        orderItems.push({
-          inventoryItemId: invItem._id,
-          itemName: invItem.name,
-          quantity,
-          unitPrice: invItem.price,
-          subtotal: itemSubtotal,
-        });
       }
 
       // 3. Compute discount
@@ -75,21 +114,19 @@ export async function createOrder(dto: CreateOrderRequest): Promise<IOrderDoc> {
       const total = subtotal - discountAmount;
 
       // 4. Deduct inventory quantities + create StockMovements
-      for (const { inventoryItemId, quantity } of dto.items) {
+      for (const { id, quantity, name } of inventoryDeductions) {
         await InventoryItem.findByIdAndUpdate(
-          inventoryItemId,
+          id,
           { $inc: { currentQuantity: -quantity } },
           { session }
         );
-
-        const item = orderItems.find((i) => String(i.inventoryItemId) === inventoryItemId);
         await StockMovement.create(
           [
             {
-              inventoryItemId,
+              inventoryItemId: id,
               movementType: 'ORDER_DEDUCTION',
               quantityDelta: -quantity,
-              notes: `Order deduction for ${item?.itemName ?? inventoryItemId}`,
+              notes: `Order deduction for ${name}`,
               recordedBy: 'admin',
               recordedAt: new Date(),
             },

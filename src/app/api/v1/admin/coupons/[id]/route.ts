@@ -9,6 +9,7 @@ import { getById, update, remove } from '@/server/services/coupon.server.service
 const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 const UpdateCouponSchema = z.object({
+  discountType: z.enum(['PERCENTAGE', 'FIXED_AMOUNT']).optional(),
   discountValue: z.number().min(0).optional(),
   startDate: dateString.optional(),
   expiryDate: dateString.optional(),

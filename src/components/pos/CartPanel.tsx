@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { X } from 'lucide-react';
 import { CouponInput } from './CouponInput';
 import { CustomerForm } from './CustomerForm';
 import type { CartItem, CouponValidationResult } from '@/types';
@@ -38,12 +39,12 @@ export function CartPanel({
   const [customerPhone, setCustomerPhone] = useState('');
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-100 shadow-md">
+    <div className="flex flex-col lg:h-full bg-white rounded-2xl border border-slate-100 shadow-md">
       <div className="px-5 py-4 border-b border-slate-100">
         <h2 className="font-bold text-slate-900">Current Order</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
+      <div className="overflow-y-auto lg:flex-1 max-h-64 lg:max-h-none px-5 py-3 space-y-2">
         {items.length === 0 && (
           <p className="text-slate-400 text-sm py-6 text-center">Add items to start an order</p>
         )}
@@ -71,9 +72,9 @@ export function CartPanel({
               </button>
               <button
                 onClick={() => onRemove(item.inventoryItemId)}
-                className="ml-1 text-slate-300 hover:text-red-400 text-sm"
+                className="ml-1 text-slate-300 hover:text-red-400 transition-colors"
               >
-                ✕
+                <X size={13} />
               </button>
             </div>
             <span className="text-sm font-semibold text-slate-700 w-16 text-right shrink-0">

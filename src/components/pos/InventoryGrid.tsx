@@ -1,17 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { POSItem, ICategory } from '@/types';
+import type { POSItem, POSComboItem, ICategory } from '@/types';
 import { gateway } from '@/lib/gateway';
-import { ItemCard } from './ItemCard';
+import { ItemCard, ComboCard } from './ItemCard';
 
 interface InventoryGridProps {
   onAddItem: (item: Omit<import('@/types').CartItem, 'quantity'>) => void;
   currencySymbol?: string;
 }
 
+function getSalePrice(price: number, discountType?: string | null, discountValue?: number): number {
+  if (!discountType || !discountValue) return price;
+  if (discountType === 'PERCENTAGE') return Math.max(0, price * (1 - discountValue / 100));
+  return Math.max(0, price - discountValue);
+}
+
 export function InventoryGrid({ onAddItem, currencySymbol = '₹' }: InventoryGridProps) {
   const [items, setItems] = useState<POSItem[]>([]);
+  const [combos, setCombos] = useState<POSComboItem[]>([]);
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
@@ -24,10 +31,16 @@ export function InventoryGrid({ onAddItem, currencySymbol = '₹' }: InventoryGr
     const query = params.toString() ? `?${params}` : '';
 
     setLoading(true);
-    gateway
-      .get<POSItem[]>(`/admin/pos/items${query}`)
-      .then(setItems)
-      .catch(() => setItems([]))
+    Promise.all([
+      gateway.get<POSItem[]>(`/admin/pos/items${query}`).catch(() => [] as POSItem[]),
+      activeCategory === 'all' && !search.trim()
+        ? gateway.get<POSComboItem[]>('/admin/pos/combos').catch(() => [] as POSComboItem[])
+        : Promise.resolve([] as POSComboItem[]),
+    ])
+      .then(([posItems, posCompos]) => {
+        setItems(posItems);
+        setCombos(posCompos);
+      })
       .finally(() => setLoading(false));
   }, [activeCategory, search]);
 
@@ -79,13 +92,25 @@ export function InventoryGrid({ onAddItem, currencySymbol = '₹' }: InventoryGr
       ) : items.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">No items available</div>
       ) : (
-        <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 content-start">
+        <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 content-start">
+          {combos.map((combo) => (
+            <ComboCard
+              key={`combo-${combo._id}`}
+              item={combo}
+              currencySymbol={currencySymbol}
+              onAdd={(c) => onAddItem({ inventoryItemId: c._id, name: c.name, price: c.price, isCombo: true })}
+            />
+          ))}
           {items.map((item) => (
             <ItemCard
               key={item._id}
               item={item}
               currencySymbol={currencySymbol}
-              onAdd={(i) => onAddItem({ inventoryItemId: i._id, name: i.name, price: i.price })}
+              onAdd={(i) => onAddItem({
+                inventoryItemId: i._id,
+                name: i.name,
+                price: getSalePrice(i.price, i.discountType, i.discountValue),
+              })}
             />
           ))}
         </div>

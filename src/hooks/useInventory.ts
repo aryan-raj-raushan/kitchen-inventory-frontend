@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { getAll, deactivate as deactivateItem } from '@/services/inventory.service';
 import type { IInventoryItem } from '@/types';
 
@@ -16,7 +17,8 @@ export function useInventory(params?: { status?: string; category?: string }) {
       const raw = await getAll(params);
       setItems(raw);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load inventory');
+      const msg = e instanceof Error ? e.message : 'Failed to load inventory';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -25,9 +27,12 @@ export function useInventory(params?: { status?: string; category?: string }) {
   async function deactivate(id: string) {
     try {
       await deactivateItem(id);
+      toast.success('Item deactivated');
       await refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to deactivate item');
+      const msg = e instanceof Error ? e.message : 'Failed to deactivate item';
+      setError(msg);
+      toast.error(msg);
     }
   }
 
