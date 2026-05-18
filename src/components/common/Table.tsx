@@ -18,32 +18,32 @@ export function Table<T extends { _id?: string; id?: string }>({
   emptyMessage = 'No data',
 }: TableProps<T>) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50">
-          <tr>
+    <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm">
+      <table className="min-w-full text-sm">
+        <thead>
+          <tr className="bg-slate-50 border-b border-slate-100">
             {columns.map((col, i) => (
               <th
                 key={i}
-                className={`px-4 py-3 text-left font-medium text-slate-600 ${col.className ?? ''}`}
+                className={`px-5 py-3.5 text-left font-semibold text-slate-600 ${col.className ?? ''}`}
               >
                 {col.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 bg-white">
+        <tbody className="divide-y divide-slate-50 bg-white">
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-8 text-center text-slate-400">
+              <td colSpan={columns.length} className="px-5 py-12 text-center text-slate-400">
                 {emptyMessage}
               </td>
             </tr>
           ) : (
             rows.map((row, ri) => (
-              <tr key={row._id ?? row.id ?? ri} className="hover:bg-slate-50">
+              <tr key={row._id ?? row.id ?? ri} className="hover:bg-slate-50/60 transition-colors">
                 {columns.map((col, ci) => (
-                  <td key={ci} className={`px-4 py-3 text-slate-700 ${col.className ?? ''}`}>
+                  <td key={ci} className={`px-5 py-3.5 text-slate-700 ${col.className ?? ''}`}>
                     {typeof col.accessor === 'function'
                       ? col.accessor(row)
                       : (row[col.accessor] as React.ReactNode)}

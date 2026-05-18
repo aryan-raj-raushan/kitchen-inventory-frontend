@@ -3,69 +3,57 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useInventory } from '@/hooks/useInventory';
-import { useInventoryReset } from '@/hooks/useInventoryReset';
 import { useStockMovement } from '@/hooks/useStockMovement';
 import { ItemCard } from '@/components/inventory/ItemCard';
 import { MovementForm } from '@/components/inventory/MovementForm';
+import { DailyResetPrompt } from '@/components/inventory/DailyResetPrompt';
 import { Modal } from '@/components/common/Modal';
-import { Button } from '@/components/common/Button';
 import { Alert } from '@/components/common/Alert';
 import { Spinner } from '@/components/common/Spinner';
-import type { IInventoryItem, StockStatus } from '@/types';
+import type { IInventoryItem } from '@/types';
 
 export default function InventoryPage() {
-  const { items, isLoading, error, refetch, deactivateItem } = useInventory();
-  const reset = useInventoryReset(refetch);
-  const [selectedItem, setSelectedItem] = useState<(IInventoryItem & { stockStatus: StockStatus }) | null>(null);
+  const { items, isLoading, error, refetch, deactivate } = useInventory();
+  const [selectedItem, setSelectedItem] = useState<IInventoryItem | null>(null);
   const movement = useStockMovement(() => {
     setSelectedItem(null);
     refetch();
   });
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Inventory</h1>
-        <div className="flex gap-2">
-          <Button
-            variant="danger"
-            size="sm"
-            loading={reset.isResetting}
-            onClick={reset.promptReset}
-          >
-            Daily Reset
-          </Button>
-          <Link href="/inventory/new">
-            <Button size="sm">Add Item</Button>
-          </Link>
-        </div>
+    <div className="space-y-6">
+      {/* Daily reset prompt — shown when reset items need today's quantity */}
+      <DailyResetPrompt onConfirmed={refetch} />
+
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">Inventory</h1>
+        <Link
+          href="/inventory/new"
+          className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+        >
+          + Add Item
+        </Link>
       </div>
 
       {error && <Alert variant="error" message={error} />}
-      {reset.error && <Alert variant="error" message={reset.error} />}
-      {reset.result && (
-        <Alert variant="success" message={`Reset complete — ${reset.result.resetCount} items restored to par level`} />
-      )}
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-16">
           <Spinner size="lg" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {items.map((item) => (
             <ItemCard
               key={item._id}
               item={item}
-              onEdit={() => {}}
-              onDeactivate={() => deactivateItem(item._id)}
-              onRecordMovement={() => setSelectedItem(item)}
+              onDeactivate={(id) => deactivate(id)}
             />
           ))}
           {items.length === 0 && (
-            <p className="col-span-full text-center text-slate-400 py-12">
+            <p className="col-span-full text-center text-slate-400 py-16">
               No inventory items yet.{' '}
-              <Link href="/inventory/new" className="text-blue-600 hover:underline">
+              <Link href="/inventory/new" className="text-indigo-600 hover:underline">
                 Add one
               </Link>
             </p>
@@ -73,22 +61,6 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Daily reset confirmation */}
-      {reset.showConfirm && (
-        <Modal title="Confirm Daily Reset" onClose={reset.cancel}>
-          <div className="space-y-4">
-            <p className="text-sm text-slate-600">
-              This will restore ALL active inventory items to their par levels. This action cannot be undone.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button variant="secondary" onClick={reset.cancel}>Cancel</Button>
-              <Button variant="danger" onClick={reset.confirm}>Confirm Reset</Button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* Stock movement modal */}
       {selectedItem && (
         <Modal title="Record Stock Movement" onClose={() => setSelectedItem(null)}>
           <MovementForm

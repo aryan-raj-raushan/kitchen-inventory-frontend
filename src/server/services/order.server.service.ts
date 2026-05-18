@@ -1,7 +1,6 @@
 import 'server-only';
 import mongoose from 'mongoose';
 import { InventoryItem } from '../models/InventoryItem';
-import { MenuItem } from '../models/MenuItem';
 import { Coupon } from '../models/Coupon';
 import { StockMovement } from '../models/StockMovement';
 import { Invoice } from '../models/Invoice';
@@ -27,42 +26,39 @@ export async function createOrder(dto: CreateOrderRequest): Promise<IOrderDoc> {
         couponDoc = await Coupon.findOne({ code: dto.couponCode.toUpperCase() }).session(session);
         if (!couponDoc) throw new ValidationError('Coupon not found');
         if (couponDoc.status !== 'ACTIVE') throw new ValidationError('Coupon is not active');
-        if (couponDoc.usesRemaining <= 0) throw new ValidationError('Coupon has no uses remaining');
-        if (new Date(couponDoc.expiryDate) < new Date())
-          throw new ValidationError('Coupon has expired');
+        if (couponDoc.maxUses > 0 && couponDoc.usesRemaining <= 0)
+          throw new ValidationError('Coupon has no uses remaining');
+        const now = new Date();
+        if (new Date(couponDoc.startDate) > now) throw new ValidationError('Coupon is not yet valid');
+        if (new Date(couponDoc.expiryDate) < now) throw new ValidationError('Coupon has expired');
       }
 
       // 2. Validate each ordered item and compute subtotal
       let subtotal = 0;
       const orderItems = [];
 
-      for (const { menuItemId, quantity } of dto.items) {
-        if (!mongoose.Types.ObjectId.isValid(menuItemId)) {
-          throw new ValidationError(`Invalid menu item ID: ${menuItemId}`);
+      for (const { inventoryItemId, quantity } of dto.items) {
+        if (!mongoose.Types.ObjectId.isValid(inventoryItemId)) {
+          throw new ValidationError(`Invalid inventory item ID: ${inventoryItemId}`);
         }
 
-        const menuItem = await MenuItem.findById(menuItemId).session(session);
-        if (!menuItem || menuItem.status !== 'ACTIVE') {
-          throw new NotFoundError(`Menu item not found or inactive: ${menuItemId}`);
-        }
-
-        const invItem = await InventoryItem.findById(menuItem.inventoryItemId).session(session);
+        const invItem = await InventoryItem.findById(inventoryItemId).session(session);
         if (!invItem || invItem.status !== 'ACTIVE') {
-          throw new NotFoundError(`Inventory item unavailable for: ${menuItem.name}`);
+          throw new NotFoundError(`Inventory item not found or inactive: ${inventoryItemId}`);
         }
         if (invItem.currentQuantity < quantity) {
           throw new ConflictError(
-            `Insufficient stock for "${menuItem.name}": requested ${quantity}, available ${invItem.currentQuantity}`
+            `Insufficient stock for "${invItem.name}": requested ${quantity}, available ${invItem.currentQuantity}`
           );
         }
 
-        const itemSubtotal = menuItem.price * quantity;
+        const itemSubtotal = invItem.price * quantity;
         subtotal += itemSubtotal;
         orderItems.push({
-          menuItemId: menuItem._id,
-          menuItemName: menuItem.name,
+          inventoryItemId: invItem._id,
+          itemName: invItem.name,
           quantity,
-          unitPrice: menuItem.price,
+          unitPrice: invItem.price,
           subtotal: itemSubtotal,
         });
       }
@@ -79,23 +75,23 @@ export async function createOrder(dto: CreateOrderRequest): Promise<IOrderDoc> {
       const total = subtotal - discountAmount;
 
       // 4. Deduct inventory quantities + create StockMovements
-      for (const { menuItemId, quantity } of dto.items) {
-        const menuItem = await MenuItem.findById(menuItemId).session(session);
-        if (!menuItem) continue;
-
+      for (const { inventoryItemId, quantity } of dto.items) {
         await InventoryItem.findByIdAndUpdate(
-          menuItem.inventoryItemId,
+          inventoryItemId,
           { $inc: { currentQuantity: -quantity } },
           { session }
         );
 
+        const item = orderItems.find((i) => String(i.inventoryItemId) === inventoryItemId);
         await StockMovement.create(
           [
             {
-              inventoryItemId: menuItem.inventoryItemId,
+              inventoryItemId,
               movementType: 'ORDER_DEDUCTION',
               quantityDelta: -quantity,
-              notes: `Order deduction for ${menuItem.name}`,
+              notes: `Order deduction for ${item?.itemName ?? inventoryItemId}`,
+              recordedBy: 'admin',
+              recordedAt: new Date(),
             },
           ],
           { session }
@@ -103,7 +99,7 @@ export async function createOrder(dto: CreateOrderRequest): Promise<IOrderDoc> {
       }
 
       // 5. Decrement coupon uses
-      if (couponDoc) {
+      if (couponDoc && couponDoc.maxUses > 0) {
         await Coupon.findByIdAndUpdate(
           couponDoc._id,
           { $inc: { usesRemaining: -1 } },
@@ -142,7 +138,7 @@ export async function createOrder(dto: CreateOrderRequest): Promise<IOrderDoc> {
               logoUrl: template?.logoUrl,
               footerText: template?.footerText,
               terms: template?.terms,
-              currencySymbol: template?.currencySymbol ?? '$',
+              currencySymbol: template?.currencySymbol ?? '₹',
             },
             generatedAt: new Date(),
           },
@@ -157,11 +153,7 @@ export async function createOrder(dto: CreateOrderRequest): Promise<IOrderDoc> {
   }
 }
 
-export async function getOrders(filters: {
-  status?: string;
-  page?: number;
-  limit?: number;
-}) {
+export async function getOrders(filters: { status?: string; page?: number; limit?: number }) {
   return orderRepo.findAll(filters);
 }
 

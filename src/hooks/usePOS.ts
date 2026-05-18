@@ -1,15 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useCartStore } from '@/store/cartStore';
-import { getMenu } from '@/services/menu.service';
 import { createOrder } from '@/services/order.service';
 import { validate } from '@/services/coupon.service';
-import type { IMenuItem, IOrder, CouponValidationResult } from '@/types';
+import type { IOrder, CouponValidationResult } from '@/types';
 
 export function usePOS() {
-  const [menuItems, setMenuItems] = useState<IMenuItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
   const [orderResult, setOrderResult] = useState<IOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -18,13 +15,6 @@ export function usePOS() {
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   const { items: cartItems, subtotal, clearCart } = useCartStore();
-
-  useEffect(() => {
-    getMenu()
-      .then(setMenuItems)
-      .catch((e) => setError(e.message))
-      .finally(() => setIsLoading(false));
-  }, []);
 
   async function applyCoupon(code: string) {
     if (!code.trim()) {
@@ -36,9 +26,10 @@ export function usePOS() {
     try {
       const result = await validate(code, subtotal);
       setCouponResult(result);
-      setCouponCode(code);
+      setCouponCode(result.valid ? code : '');
     } catch (e) {
-      setCouponResult(null);
+      setCouponResult({ valid: false, reason: e instanceof Error ? e.message : 'Validation failed', discountAmount: 0, newTotal: subtotal });
+      setCouponCode('');
     } finally {
       setIsValidatingCoupon(false);
     }
@@ -56,7 +47,7 @@ export function usePOS() {
         customerName,
         customerPhone,
         couponCode: couponCode || undefined,
-        items: cartItems.map((i) => ({ menuItemId: i.menuItemId, quantity: i.quantity })),
+        items: cartItems.map((i) => ({ inventoryItemId: i.inventoryItemId, quantity: i.quantity })),
       });
       setOrderResult(order);
       clearCart();
@@ -78,13 +69,10 @@ export function usePOS() {
   const total = Math.max(0, subtotal - discountAmount);
 
   return {
-    menuItems,
-    isLoading,
     isConfirming,
     orderResult,
     error,
     couponResult,
-    couponCode,
     isValidatingCoupon,
     subtotal,
     discountAmount,

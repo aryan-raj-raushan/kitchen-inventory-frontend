@@ -4,21 +4,18 @@ import { connectDB } from '@/lib/db';
 import { withAuth } from '@/lib/withAuth';
 import { validateBody } from '@/lib/validate';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
-import { getAll, create } from '@/server/services/menuItem.server.service';
+import { Category } from '@/server/models/Category';
 
 const CreateSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().min(1).trim(),
   description: z.string().optional(),
-  categoryId: z.string().min(1),
-  price: z.number().min(0),
-  inventoryItemId: z.string().min(1),
 });
 
-export const GET = withAuth(async (_req: NextRequest): Promise<NextResponse> => {
+export const GET = withAuth(async (): Promise<NextResponse> => {
   try {
     await connectDB();
-    const items = await getAll();
-    return successResponse(items);
+    const categories = await Category.find().sort({ name: 1 }).lean();
+    return successResponse(categories);
   } catch (err) {
     return errorResponse(err);
   }
@@ -29,8 +26,10 @@ export const POST = withAuth(async (req: NextRequest): Promise<NextResponse> => 
     await connectDB();
     const body = await req.json();
     const data = validateBody(CreateSchema, body);
-    const item = await create(data);
-    return successResponse(item, 201);
+    const existing = await Category.findOne({ name: new RegExp(`^${data.name}$`, 'i') });
+    if (existing) return NextResponse.json({ error: 'Category already exists' }, { status: 409 });
+    const category = await Category.create(data);
+    return successResponse(category, 201);
   } catch (err) {
     return errorResponse(err);
   }

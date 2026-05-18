@@ -17,7 +17,8 @@ export async function findByCode(code: string): Promise<ICouponDoc | null> {
 }
 
 export async function create(data: CreateCouponRequest): Promise<ICouponDoc> {
-  return Coupon.create({ ...data, usesRemaining: data.maxUses });
+  // usesRemaining mirrors maxUses; 0 means unlimited so no decrement needed
+  return Coupon.create({ ...data, usesRemaining: data.maxUses > 0 ? data.maxUses : 0 });
 }
 
 export async function update(
@@ -28,9 +29,9 @@ export async function update(
   return Coupon.findByIdAndUpdate(id, data, { new: true });
 }
 
-export async function deactivate(id: string): Promise<ICouponDoc | null> {
+export async function remove(id: string): Promise<ICouponDoc | null> {
   if (!mongoose.Types.ObjectId.isValid(id)) return null;
-  return Coupon.findByIdAndUpdate(id, { status: 'DEACTIVATED' }, { new: true });
+  return Coupon.findByIdAndDelete(id);
 }
 
 export async function decrementUses(

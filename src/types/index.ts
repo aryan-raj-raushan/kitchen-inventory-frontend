@@ -1,13 +1,13 @@
 // ─── Shared enums ────────────────────────────────────────────────────────────
 
 export type ItemStatus = 'ACTIVE' | 'INACTIVE';
-export type StockStatus = 'OK' | 'LOW' | 'CRITICAL' | 'OUT_OF_STOCK';
+export type StockStatus = 'OK' | 'OUT_OF_STOCK';
 export type OrderStatus = 'CONFIRMED' | 'CANCELLED';
 export type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
 export type CouponStatus = 'ACTIVE' | 'DEACTIVATED';
 export type MovementType = 'MANUAL_IN' | 'MANUAL_OUT' | 'ORDER_DEDUCTION' | 'DAILY_RESET';
 
-// ─── Domain entities (mirrors data-model.md) ─────────────────────────────────
+// ─── Domain entities ──────────────────────────────────────────────────────────
 
 export interface ICategory {
   _id: string;
@@ -21,32 +21,30 @@ export interface IInventoryItem {
   name: string;
   categoryId: string;
   unit: string;
+  price: number;
   currentQuantity: number;
-  minimumThreshold: number;
-  criticalThreshold: number;
-  parLevel: number;
+  dailyReset: boolean;
+  imageUrl?: string;
   status: ItemStatus;
   stockStatus: StockStatus;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface IMenuItem {
+export interface IDailyResetLog {
   _id: string;
-  name: string;
-  description?: string;
-  categoryId: string;
-  price: number;
   inventoryItemId: string;
-  status: ItemStatus;
-  available: boolean;
+  resetDate: string;
+  quantityBeforeReset: number;
+  confirmedQuantity?: number;
+  confirmedAt?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface IOrderItem {
-  menuItemId: string;
-  menuItemName: string;
+  inventoryItemId?: string;
+  menuItemId?: string;
+  itemName: string;
   quantity: number;
   unitPrice: number;
   subtotal: number;
@@ -99,9 +97,10 @@ export interface ICoupon {
   code: string;
   discountType: DiscountType;
   discountValue: number;
+  startDate: string;
+  expiryDate: string;
   maxUses: number;
   usesRemaining: number;
-  expiryDate: string;
   status: CouponStatus;
   createdAt: string;
   updatedAt: string;
@@ -130,25 +129,27 @@ export interface LoginResponse {
   accessToken: string;
 }
 
-export interface CreateMenuItemRequest {
-  name: string;
-  description?: string;
-  categoryId: string;
-  price: number;
-  inventoryItemId: string;
-}
-
 export interface CreateInventoryItemRequest {
   name: string;
   categoryId: string;
   unit: string;
+  price: number;
   currentQuantity: number;
-  minimumThreshold: number;
-  criticalThreshold: number;
-  parLevel: number;
+  dailyReset: boolean;
+  imageUrl?: string;
 }
 
-export interface UpdateInventoryItemRequest extends Partial<CreateInventoryItemRequest> {}
+export interface UpdateInventoryItemRequest extends Partial<CreateInventoryItemRequest> {
+  status?: ItemStatus;
+}
+
+export interface SetDailyQuantityRequest {
+  quantity: number;
+}
+
+export interface ImageUploadResponse {
+  imageUrl: string;
+}
 
 export interface StockMovementRequest {
   movementType: 'MANUAL_IN' | 'MANUAL_OUT';
@@ -161,7 +162,7 @@ export interface CreateOrderRequest {
   customerPhone: string;
   couponCode?: string;
   items: Array<{
-    menuItemId: string;
+    inventoryItemId: string;
     quantity: number;
   }>;
 }
@@ -183,8 +184,13 @@ export interface CreateCouponRequest {
   code: string;
   discountType: DiscountType;
   discountValue: number;
-  maxUses: number;
+  startDate: string;
   expiryDate: string;
+  maxUses: number;
+}
+
+export interface UpdateCouponRequest extends Partial<CreateCouponRequest> {
+  status?: CouponStatus;
 }
 
 export interface UpdateInvoiceTemplateRequest {
@@ -215,8 +221,21 @@ export interface PaginatedResponse<T> {
 // ─── Cart (client-side POS state) ────────────────────────────────────────────
 
 export interface CartItem {
-  menuItemId: string;
+  inventoryItemId: string;
   name: string;
   price: number;
   quantity: number;
+}
+
+// ─── POS ─────────────────────────────────────────────────────────────────────
+
+export interface POSItem {
+  _id: string;
+  name: string;
+  price: number;
+  currentQuantity: number;
+  unit: string;
+  imageUrl?: string;
+  categoryId: string;
+  categoryName: string;
 }

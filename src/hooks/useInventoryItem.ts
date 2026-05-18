@@ -9,10 +9,6 @@ export function useInventoryItem(existingId?: string) {
   const [error, setError] = useState<string | null>(null);
 
   async function save(data: CreateInventoryItemRequest) {
-    if (data.criticalThreshold >= data.minimumThreshold) {
-      setError('Critical threshold must be less than minimum threshold');
-      return false;
-    }
     setIsSaving(true);
     setError(null);
     try {

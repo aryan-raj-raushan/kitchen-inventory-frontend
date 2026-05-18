@@ -25,7 +25,15 @@ export default function ReportsPage() {
     },
     {
       header: 'Item',
-      accessor: (m: IStockMovement) => m.inventoryItemName ?? m.inventoryItemId,
+      accessor: (m: IStockMovement) => {
+        if (m.inventoryItemName) return m.inventoryItemName;
+        const id = m.inventoryItemId;
+        // Mongoose may populate inventoryItemId with the full document
+        if (typeof id === 'object' && id !== null) {
+          return (id as unknown as { name?: string })?.name ?? '—';
+        }
+        return id ?? '—';
+      },
     },
     {
       header: 'Delta',
@@ -89,7 +97,7 @@ export default function ReportsPage() {
         </div>
       ) : (
         <>
-          <Table columns={columns} rows={movements} emptyMessage="No movements found" />
+          <Table<IStockMovement> columns={columns} rows={movements} emptyMessage="No movements found" />
           {total > limit && (
             <div className="mt-4 flex justify-center gap-2">
               <Button size="sm" variant="secondary" disabled={page === 1} onClick={() => setPage(page - 1)}>

@@ -3,8 +3,9 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 import type { OrderStatus } from '@/types';
 
 export interface IOrderItemDoc {
-  menuItemId: Types.ObjectId;
-  menuItemName: string;
+  inventoryItemId?: Types.ObjectId;
+  menuItemId?: Types.ObjectId;
+  itemName: string;
   quantity: number;
   unitPrice: number;
   subtotal: number;
@@ -26,8 +27,9 @@ export interface IOrderDoc extends Document {
 
 const OrderItemSchema = new Schema<IOrderItemDoc>(
   {
-    menuItemId: { type: Schema.Types.ObjectId, ref: 'MenuItem', required: true },
-    menuItemName: { type: String, required: true },
+    inventoryItemId: { type: Schema.Types.ObjectId, ref: 'InventoryItem' },
+    menuItemId: { type: Schema.Types.ObjectId, ref: 'MenuItem' },
+    itemName: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true, min: 0 },
     subtotal: { type: Number, required: true, min: 0 },

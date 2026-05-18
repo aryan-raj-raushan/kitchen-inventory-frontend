@@ -6,9 +6,16 @@ type AlertVariant = 'error' | 'warning' | 'success' | 'info';
 
 const variantClasses: Record<AlertVariant, string> = {
   error: 'bg-red-50 border-red-200 text-red-700',
-  warning: 'bg-yellow-50 border-yellow-200 text-yellow-700',
-  success: 'bg-green-50 border-green-200 text-green-700',
-  info: 'bg-blue-50 border-blue-200 text-blue-700',
+  warning: 'bg-amber-50 border-amber-200 text-amber-700',
+  success: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+  info: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+};
+
+const icons: Record<AlertVariant, string> = {
+  error: '✕',
+  warning: '⚠',
+  success: '✓',
+  info: 'ℹ',
 };
 
 interface AlertProps {
@@ -24,13 +31,14 @@ export function Alert({ variant = 'info', message, dismissible = true }: AlertPr
   return (
     <div
       role="alert"
-      className={`flex items-start justify-between gap-3 rounded-md border px-4 py-3 text-sm ${variantClasses[variant]}`}
+      className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${variantClasses[variant]}`}
     >
-      <span>{message}</span>
+      <span className="shrink-0 font-bold">{icons[variant]}</span>
+      <span className="flex-1">{message}</span>
       {dismissible && (
         <button
           onClick={() => setDismissed(true)}
-          className="shrink-0 font-medium hover:opacity-70"
+          className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
           aria-label="Dismiss"
         >
           ✕

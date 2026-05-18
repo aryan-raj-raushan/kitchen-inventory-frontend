@@ -8,8 +8,8 @@ interface CartState {
   subtotal: number;
   itemCount: number;
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
-  removeItem: (menuItemId: string) => void;
-  updateQuantity: (menuItemId: string, quantity: number) => void;
+  removeItem: (inventoryItemId: string) => void;
+  updateQuantity: (inventoryItemId: string, quantity: number) => void;
   clearCart: () => void;
 }
 
@@ -27,11 +27,11 @@ export const useCartStore = create<CartState>((set, get) => ({
   itemCount: 0,
 
   addItem: (item) => {
-    const existing = get().items.find((i) => i.menuItemId === item.menuItemId);
+    const existing = get().items.find((i) => i.inventoryItemId === item.inventoryItemId);
     let next: CartItem[];
     if (existing) {
       next = get().items.map((i) =>
-        i.menuItemId === item.menuItemId ? { ...i, quantity: i.quantity + 1 } : i
+        i.inventoryItemId === item.inventoryItemId ? { ...i, quantity: i.quantity + 1 } : i
       );
     } else {
       next = [...get().items, { ...item, quantity: 1 }];
@@ -39,17 +39,19 @@ export const useCartStore = create<CartState>((set, get) => ({
     set({ items: next, subtotal: computeSubtotal(next), itemCount: computeItemCount(next) });
   },
 
-  removeItem: (menuItemId) => {
-    const next = get().items.filter((i) => i.menuItemId !== menuItemId);
+  removeItem: (inventoryItemId) => {
+    const next = get().items.filter((i) => i.inventoryItemId !== inventoryItemId);
     set({ items: next, subtotal: computeSubtotal(next), itemCount: computeItemCount(next) });
   },
 
-  updateQuantity: (menuItemId, quantity) => {
+  updateQuantity: (inventoryItemId, quantity) => {
     if (quantity <= 0) {
-      get().removeItem(menuItemId);
+      get().removeItem(inventoryItemId);
       return;
     }
-    const next = get().items.map((i) => (i.menuItemId === menuItemId ? { ...i, quantity } : i));
+    const next = get().items.map((i) =>
+      i.inventoryItemId === inventoryItemId ? { ...i, quantity } : i
+    );
     set({ items: next, subtotal: computeSubtotal(next), itemCount: computeItemCount(next) });
   },
 

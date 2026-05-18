@@ -3,31 +3,38 @@ import mongoose from 'mongoose';
 import * as repo from '../repositories/inventory.repository';
 import * as movementRepo from '../repositories/stockMovement.repository';
 import { ValidationError, NotFoundError, ConflictError } from '@/lib/errors';
-import type { CreateInventoryItemRequest, StockMovementRequest } from '@/types';
+import type { CreateInventoryItemRequest, UpdateInventoryItemRequest, StockMovementRequest } from '@/types';
 
-export async function getAll(filters?: { status?: string }) {
+function validateImageUrl(imageUrl: string): void {
+  if (imageUrl.startsWith('/uploads/')) return;
+  try {
+    new URL(imageUrl);
+  } catch {
+    throw new ValidationError('imageUrl must be a /uploads/ path or a valid URL');
+  }
+}
+
+export async function getAll(filters?: { status?: string; categoryId?: string }) {
   return repo.findAll(filters);
 }
 
+export async function getById(id: string) {
+  const item = await repo.findById(id);
+  if (!item) throw new NotFoundError('Inventory item not found');
+  return item;
+}
+
 export async function create(dto: CreateInventoryItemRequest) {
-  if (dto.criticalThreshold >= dto.minimumThreshold) {
-    throw new ValidationError(
-      'Critical threshold must be less than minimum threshold'
-    );
-  }
+  if (dto.price < 0) throw new ValidationError('price must be >= 0');
+  if (dto.imageUrl) validateImageUrl(dto.imageUrl);
   return repo.create(dto);
 }
 
-export async function update(id: string, dto: Partial<CreateInventoryItemRequest>) {
+export async function update(id: string, dto: UpdateInventoryItemRequest) {
   const item = await repo.findById(id);
   if (!item) throw new NotFoundError('Inventory item not found');
-
-  const critical = dto.criticalThreshold ?? item.criticalThreshold;
-  const minimum = dto.minimumThreshold ?? item.minimumThreshold;
-  if (critical >= minimum) {
-    throw new ValidationError('Critical threshold must be less than minimum threshold');
-  }
-
+  if (dto.price !== undefined && dto.price < 0) throw new ValidationError('price must be >= 0');
+  if (dto.imageUrl) validateImageUrl(dto.imageUrl);
   const updated = await repo.update(id, dto);
   if (!updated) throw new NotFoundError('Inventory item not found');
   return updated;
@@ -37,6 +44,10 @@ export async function deactivate(id: string) {
   const item = await repo.deactivate(id);
   if (!item) throw new NotFoundError('Inventory item not found');
   return item;
+}
+
+export async function getAvailableForPOS(filters?: { categoryId?: string; search?: string }) {
+  return repo.findAvailableForPOS(filters);
 }
 
 export async function recordManualMovement(id: string, dto: StockMovementRequest) {
@@ -63,40 +74,4 @@ export async function recordManualMovement(id: string, dto: StockMovementRequest
   });
 
   return repo.findById(id);
-}
-
-export async function dailyReset() {
-  const session = await mongoose.startSession();
-  const movements: Array<{
-    inventoryItemId: mongoose.Types.ObjectId;
-    movementType: 'DAILY_RESET';
-    quantityDelta: number;
-    notes: string;
-    recordedBy: string;
-    recordedAt: Date;
-  }> = [];
-
-  try {
-    await session.withTransaction(async () => {
-      const items = await repo.resetToParLevel(session);
-      for (const item of items) {
-        movements.push({
-          inventoryItemId: item._id as mongoose.Types.ObjectId,
-          movementType: 'DAILY_RESET',
-          quantityDelta: item.parLevel - item.currentQuantity,
-          notes: `Daily reset to par level ${item.parLevel}`,
-          recordedBy: 'admin',
-          recordedAt: new Date(),
-        });
-      }
-    });
-
-    for (const m of movements) {
-      await movementRepo.create(m);
-    }
-
-    return { resetCount: movements.length };
-  } finally {
-    session.endSession();
-  }
 }

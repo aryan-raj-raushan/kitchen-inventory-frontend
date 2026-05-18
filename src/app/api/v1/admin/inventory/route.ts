@@ -10,16 +10,21 @@ const CreateSchema = z.object({
   name: z.string().min(1),
   categoryId: z.string().min(1),
   unit: z.string().min(1),
+  price: z.number().min(0),
   currentQuantity: z.number().min(0),
-  minimumThreshold: z.number().min(0),
-  criticalThreshold: z.number().min(0),
-  parLevel: z.number().min(0),
+  dailyReset: z.boolean().default(false),
+  imageUrl: z.string().optional(),
 });
 
-export const GET = withAuth(async (): Promise<NextResponse> => {
+export const GET = withAuth(async (req: NextRequest): Promise<NextResponse> => {
   try {
     await connectDB();
-    const items = await getAll();
+    const { searchParams } = new URL(req.url);
+    const filters = {
+      status: searchParams.get('status') ?? undefined,
+      categoryId: searchParams.get('category') ?? undefined,
+    };
+    const items = await getAll(filters);
     return successResponse(items);
   } catch (err) {
     return errorResponse(err);

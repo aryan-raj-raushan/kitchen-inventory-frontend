@@ -1,10 +1,16 @@
 import 'server-only';
 import * as repo from '../repositories/coupon.repository';
 import { ConflictError, NotFoundError } from '@/lib/errors';
-import type { CreateCouponRequest, CouponValidationResult } from '@/types';
+import type { CreateCouponRequest, UpdateCouponRequest, CouponValidationResult } from '@/types';
 
 export async function getAll() {
   return repo.findAll();
+}
+
+export async function getById(id: string) {
+  const coupon = await repo.findById(id);
+  if (!coupon) throw new NotFoundError('Coupon not found');
+  return coupon;
 }
 
 export async function create(dto: CreateCouponRequest) {
@@ -13,14 +19,20 @@ export async function create(dto: CreateCouponRequest) {
   return repo.create({ ...dto, code: dto.code.toUpperCase() });
 }
 
-export async function update(id: string, dto: Partial<CreateCouponRequest>) {
+export async function update(id: string, dto: UpdateCouponRequest) {
   const coupon = await repo.update(id, dto);
   if (!coupon) throw new NotFoundError('Coupon not found');
   return coupon;
 }
 
+export async function remove(id: string) {
+  const coupon = await repo.remove(id);
+  if (!coupon) throw new NotFoundError('Coupon not found');
+  return coupon;
+}
+
 export async function deactivate(id: string) {
-  const coupon = await repo.deactivate(id);
+  const coupon = await repo.update(id, { status: 'DEACTIVATED' });
   if (!coupon) throw new NotFoundError('Coupon not found');
   return coupon;
 }
@@ -37,10 +49,14 @@ export async function validate(
   if (coupon.status !== 'ACTIVE') {
     return { valid: false, reason: 'Coupon is inactive', discountAmount: 0, newTotal: orderTotal };
   }
-  if (coupon.usesRemaining <= 0) {
+  if (coupon.maxUses > 0 && coupon.usesRemaining <= 0) {
     return { valid: false, reason: 'Coupon has no uses remaining', discountAmount: 0, newTotal: orderTotal };
   }
-  if (new Date(coupon.expiryDate) < new Date()) {
+  const now = new Date();
+  if (new Date(coupon.startDate) > now) {
+    return { valid: false, reason: 'Coupon is not yet valid', discountAmount: 0, newTotal: orderTotal };
+  }
+  if (new Date(coupon.expiryDate) < now) {
     return { valid: false, reason: 'Coupon has expired', discountAmount: 0, newTotal: orderTotal };
   }
 
@@ -60,6 +76,7 @@ export async function validate(
       code: coupon.code,
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
+      startDate: coupon.startDate.toISOString(),
       maxUses: coupon.maxUses,
       usesRemaining: coupon.usesRemaining,
       expiryDate: coupon.expiryDate.toISOString(),
