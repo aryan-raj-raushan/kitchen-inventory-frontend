@@ -13,7 +13,7 @@ const CreateOrderSchema = z.object({
   items: z
     .array(
       z.object({
-        menuItemId: z.string().min(1),
+        inventoryItemId: z.string().min(1),
         quantity: z.number().int().min(1),
       })
     )

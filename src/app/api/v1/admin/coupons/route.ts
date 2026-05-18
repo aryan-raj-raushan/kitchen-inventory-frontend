@@ -6,12 +6,15 @@ import { validateBody } from '@/lib/validate';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { getAll, create } from '@/server/services/coupon.server.service';
 
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
 const CreateCouponSchema = z.object({
   code: z.string().min(1),
   discountType: z.enum(['PERCENTAGE', 'FIXED_AMOUNT']),
   discountValue: z.number().min(0),
-  maxUses: z.number().int().min(1),
-  expiryDate: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+  startDate: dateString,
+  expiryDate: dateString,
+  maxUses: z.number().int().min(0),
 });
 
 export const GET = withAuth(async (): Promise<NextResponse> => {

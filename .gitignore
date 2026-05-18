@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 
+# uploaded images (keep directory, ignore files)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
 # project tooling / AI context
 .claude/
 .specify/

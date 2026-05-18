@@ -1,97 +1,112 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { useInventoryItem } from '@/hooks/useInventoryItem';
-import { Button } from '@/components/common/Button';
+import Link from 'next/link';
+import { ItemForm } from '@/components/inventory/ItemForm';
+import { getById, update, deactivate } from '@/services/inventory.service';
 import { Alert } from '@/components/common/Alert';
-import type { CreateInventoryItemRequest } from '@/types';
+import { Spinner } from '@/components/common/Spinner';
+import type { IInventoryItem, UpdateInventoryItemRequest } from '@/types';
 
-export default function InventoryItemFormPage() {
+export default function EditInventoryItemPage() {
   const params = useParams();
   const router = useRouter();
-  const id = params?.id === 'new' ? undefined : (params?.id as string | undefined);
-  const { save, isSaving, error } = useInventoryItem(id);
+  const id = params?.id as string;
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<CreateInventoryItemRequest>();
+  const [item, setItem] = useState<IInventoryItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-  async function onSubmit(data: CreateInventoryItemRequest) {
-    const ok = await save({
-      ...data,
-      currentQuantity: Number(data.currentQuantity),
-      minimumThreshold: Number(data.minimumThreshold),
-      criticalThreshold: Number(data.criticalThreshold),
-      parLevel: Number(data.parLevel),
-    });
-    if (ok) router.push('/inventory');
+  useEffect(() => {
+    getById(id)
+      .then(setItem)
+      .catch(() => setError('Item not found'))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  async function handleSubmit(values: UpdateInventoryItemRequest) {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await update(id, values);
+      router.push('/inventory');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update item');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      await deactivate(id);
+      router.push('/inventory');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to deactivate item');
+    }
+  }
+
+  if (loading) {
+    return <div className="flex justify-center py-16"><Spinner size="lg" /></div>;
+  }
+
+  if (!item) {
+    return <Alert variant="error" message="Item not found" />;
   }
 
   return (
-    <div className="max-w-lg">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-900">
-          {id ? 'Edit Inventory Item' : 'Add Inventory Item'}
-        </h1>
+    <div className="max-w-xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/inventory" className="text-slate-400 hover:text-slate-600">← Back</Link>
+          <h1 className="text-2xl font-bold text-slate-900">Edit Item</h1>
+        </div>
+        <button
+          onClick={() => setDeleteConfirm(true)}
+          className="px-3 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50"
+        >
+          Deactivate
+        </button>
       </div>
 
       {error && <Alert variant="error" message={error} />}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 bg-white rounded-xl border border-slate-200 p-6">
-        {[
-          { name: 'name', label: 'Name', required: true },
-          { name: 'categoryId', label: 'Category ID', required: true },
-          { name: 'unit', label: 'Unit (e.g. pieces, kg)', required: true },
-        ].map(({ name, label, required }) => (
-          <div key={name}>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
-            <input
-              type="text"
-              {...register(name as keyof CreateInventoryItemRequest, {
-                required: required ? `${label} is required` : false,
-              })}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {errors[name as keyof CreateInventoryItemRequest] && (
-              <p className="mt-1 text-xs text-red-600">
-                {errors[name as keyof CreateInventoryItemRequest]?.message}
-              </p>
-            )}
-          </div>
-        ))}
+      <div className="bg-white rounded-2xl shadow-md border border-slate-100 p-6">
+        <ItemForm
+          defaultValues={item}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          error={error}
+        />
+      </div>
 
-        {[
-          { name: 'currentQuantity', label: 'Current Quantity' },
-          { name: 'minimumThreshold', label: 'Minimum Threshold (LOW alert)' },
-          { name: 'criticalThreshold', label: 'Critical Threshold (CRITICAL alert)' },
-          { name: 'parLevel', label: 'Par Level (daily reset target)' },
-        ].map(({ name, label }) => (
-          <div key={name}>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
-            <input
-              type="number"
-              min="0"
-              {...register(name as keyof CreateInventoryItemRequest, {
-                required: `${label} is required`,
-                min: { value: 0, message: 'Must be ≥ 0' },
-              })}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl">
+            <h2 className="text-lg font-bold text-slate-900 mb-2">Deactivate Item?</h2>
+            <p className="text-sm text-slate-500 mb-4">
+              This will hide <strong>{item.name}</strong> from inventory and POS. You can reactivate it later.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700"
+              >
+                Deactivate
+              </button>
+            </div>
           </div>
-        ))}
-
-        <div className="flex gap-3 pt-2">
-          <Button type="submit" loading={isSaving}>
-            {id ? 'Save Changes' : 'Create Item'}
-          </Button>
-          <Button type="button" variant="secondary" onClick={() => router.push('/inventory')}>
-            Cancel
-          </Button>
         </div>
-      </form>
+      )}
     </div>
   );
 }

@@ -3,33 +3,55 @@ import type {
   IInventoryItem,
   IStockMovement,
   CreateInventoryItemRequest,
+  UpdateInventoryItemRequest,
   StockMovementRequest,
   MovementFilters,
-  PaginatedResponse,
+  ImageUploadResponse,
 } from '@/types';
+import { useAuthStore } from '@/store/authStore';
 
-export async function getAll(): Promise<IInventoryItem[]> {
-  return gateway.get<IInventoryItem[]>('/admin/inventory');
+export async function getAll(params?: { status?: string; category?: string }): Promise<IInventoryItem[]> {
+  const qs = new URLSearchParams();
+  if (params?.status) qs.set('status', params.status);
+  if (params?.category) qs.set('category', params.category);
+  const query = qs.toString() ? `?${qs}` : '';
+  return gateway.get<IInventoryItem[]>(`/admin/inventory${query}`);
+}
+
+export async function getById(id: string): Promise<IInventoryItem> {
+  return gateway.get<IInventoryItem>(`/admin/inventory/${id}`);
 }
 
 export async function create(data: CreateInventoryItemRequest): Promise<IInventoryItem> {
   return gateway.post<IInventoryItem>('/admin/inventory', data);
 }
 
-export async function update(id: string, data: Partial<CreateInventoryItemRequest>): Promise<IInventoryItem> {
-  return gateway.put<IInventoryItem>(`/admin/inventory/${id}`, data);
+export async function update(id: string, data: UpdateInventoryItemRequest): Promise<IInventoryItem> {
+  return gateway.patch<IInventoryItem>(`/admin/inventory/${id}`, data);
 }
 
-export async function deactivate(id: string): Promise<IInventoryItem> {
-  return gateway.put<IInventoryItem>(`/admin/inventory/${id}`, { status: 'INACTIVE' });
+export async function deactivate(id: string): Promise<void> {
+  await gateway.delete(`/admin/inventory/${id}`);
+}
+
+export async function uploadImage(file: File): Promise<ImageUploadResponse> {
+  const { accessToken } = useAuthStore.getState();
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/v1/admin/inventory/image', {
+    method: 'POST',
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error ?? 'Upload failed');
+  }
+  return res.json();
 }
 
 export async function recordMovement(id: string, data: StockMovementRequest): Promise<IInventoryItem> {
   return gateway.post<IInventoryItem>(`/admin/inventory/${id}/movements`, data);
-}
-
-export async function triggerReset(): Promise<{ resetCount: number }> {
-  return gateway.post<{ resetCount: number }>('/admin/inventory/reset', { confirm: true });
 }
 
 export async function getMovements(
@@ -56,9 +78,7 @@ export async function exportMovements(
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);
 
-  const { useAuthStore } = await import('@/store/authStore');
   const { accessToken } = useAuthStore.getState();
-
   const res = await fetch(`/api/v1/admin/inventory/movements/export?${params}`, {
     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
   });

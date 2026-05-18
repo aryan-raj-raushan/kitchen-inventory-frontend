@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Async setState via .then() in effects is intentional, not a synchronous side effect.
+      "react-hooks/set-state-in-effect": "off",
+      // Allow explicit any in low-level lib wrappers (apiResponse, withAuth).
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

@@ -6,10 +6,10 @@ export interface IInventoryItemDoc extends Document {
   name: string;
   categoryId: Types.ObjectId;
   unit: string;
+  price: number;
   currentQuantity: number;
-  minimumThreshold: number;
-  criticalThreshold: number;
-  parLevel: number;
+  dailyReset: boolean;
+  imageUrl?: string;
   status: ItemStatus;
   stockStatus: StockStatus;
   createdAt: Date;
@@ -21,10 +21,10 @@ const InventoryItemSchema = new Schema<IInventoryItemDoc>(
     name: { type: String, unique: true, required: true, trim: true },
     categoryId: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
     unit: { type: String, required: true },
+    price: { type: Number, required: true, min: 0, default: 0 },
     currentQuantity: { type: Number, required: true, min: 0 },
-    minimumThreshold: { type: Number, required: true },
-    criticalThreshold: { type: Number, required: true },
-    parLevel: { type: Number, required: true },
+    dailyReset: { type: Boolean, default: false },
+    imageUrl: { type: String },
     status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' },
   },
   { timestamps: true }
@@ -32,12 +32,10 @@ const InventoryItemSchema = new Schema<IInventoryItemDoc>(
 
 InventoryItemSchema.index({ status: 1 });
 InventoryItemSchema.index({ categoryId: 1 });
+InventoryItemSchema.index({ dailyReset: 1 });
 
 InventoryItemSchema.virtual('stockStatus').get(function (this: IInventoryItemDoc): StockStatus {
-  if (this.currentQuantity === 0) return 'OUT_OF_STOCK';
-  if (this.currentQuantity <= this.criticalThreshold) return 'CRITICAL';
-  if (this.currentQuantity <= this.minimumThreshold) return 'LOW';
-  return 'OK';
+  return this.currentQuantity === 0 ? 'OUT_OF_STOCK' : 'OK';
 });
 
 InventoryItemSchema.set('toJSON', { virtuals: true });

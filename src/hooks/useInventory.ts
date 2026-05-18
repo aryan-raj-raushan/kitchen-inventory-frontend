@@ -2,17 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { getAll, deactivate as deactivateItem } from '@/services/inventory.service';
-import type { IInventoryItem, StockStatus } from '@/types';
+import type { IInventoryItem } from '@/types';
 
-function computeStockStatus(item: IInventoryItem): StockStatus {
-  if (item.currentQuantity === 0) return 'OUT_OF_STOCK';
-  if (item.currentQuantity <= item.criticalThreshold) return 'CRITICAL';
-  if (item.currentQuantity <= item.minimumThreshold) return 'LOW';
-  return 'OK';
-}
-
-export function useInventory() {
-  const [items, setItems] = useState<Array<IInventoryItem & { stockStatus: StockStatus }>>([]);
+export function useInventory(params?: { status?: string; category?: string }) {
+  const [items, setItems] = useState<IInventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,8 +13,8 @@ export function useInventory() {
     setIsLoading(true);
     setError(null);
     try {
-      const raw = await getAll();
-      setItems(raw.map((item) => ({ ...item, stockStatus: computeStockStatus(item) })));
+      const raw = await getAll(params);
+      setItems(raw);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load inventory');
     } finally {
@@ -40,7 +33,8 @@ export function useInventory() {
 
   useEffect(() => {
     refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { items, isLoading, error, refetch, deactivateItem: deactivate };
+  return { items, isLoading, error, refetch, deactivate };
 }

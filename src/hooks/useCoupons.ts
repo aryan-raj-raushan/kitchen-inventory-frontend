@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getAll, deactivate as deactivateCoupon } from '@/services/coupon.service';
+import { getAll, remove as removeCoupon, update } from '@/services/coupon.service';
 import type { ICoupon } from '@/types';
 
 export function useCoupons() {
@@ -22,12 +22,22 @@ export function useCoupons() {
     }
   }
 
-  async function deactivate(id: string) {
+  async function toggleStatus(coupon: ICoupon) {
     try {
-      await deactivateCoupon(id);
+      const nextStatus = coupon.status === 'ACTIVE' ? 'DEACTIVATED' : 'ACTIVE';
+      await update(coupon._id, { status: nextStatus });
       await refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to deactivate coupon');
+      setError(e instanceof Error ? e.message : 'Failed to update coupon');
+    }
+  }
+
+  async function deleteCoupon(id: string) {
+    try {
+      await removeCoupon(id);
+      await refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete coupon');
     }
   }
 
@@ -35,5 +45,5 @@ export function useCoupons() {
     refetch();
   }, []);
 
-  return { coupons, isLoading, error, refetch, deactivate };
+  return { coupons, isLoading, error, refetch, toggleStatus, deleteCoupon };
 }

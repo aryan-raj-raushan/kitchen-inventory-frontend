@@ -2,69 +2,37 @@
 
 import Link from 'next/link';
 import { useCoupons } from '@/hooks/useCoupons';
-import { Table } from '@/components/common/Table';
-import { Badge } from '@/components/common/Badge';
-import { Button } from '@/components/common/Button';
+import { CouponList } from '@/components/coupons/CouponList';
 import { Alert } from '@/components/common/Alert';
 import { Spinner } from '@/components/common/Spinner';
-import type { ICoupon } from '@/types';
 
 export default function CouponsPage() {
-  const { coupons, isLoading, error, deactivate } = useCoupons();
-
-  const columns = [
-    { header: 'Code', accessor: 'code' as keyof ICoupon },
-    {
-      header: 'Type',
-      accessor: (c: ICoupon) => <Badge variant={c.discountType} />,
-    },
-    {
-      header: 'Value',
-      accessor: (c: ICoupon) =>
-        c.discountType === 'PERCENTAGE'
-          ? `${c.discountValue}%`
-          : `$${c.discountValue.toFixed(2)}`,
-    },
-    {
-      header: 'Uses',
-      accessor: (c: ICoupon) => `${c.usesRemaining} / ${c.maxUses}`,
-    },
-    {
-      header: 'Expires',
-      accessor: (c: ICoupon) => new Date(c.expiryDate).toLocaleDateString(),
-    },
-    {
-      header: 'Status',
-      accessor: (c: ICoupon) => <Badge variant={c.status} />,
-    },
-    {
-      header: 'Actions',
-      accessor: (c: ICoupon) =>
-        c.status === 'ACTIVE' ? (
-          <Button size="sm" variant="danger" onClick={() => deactivate(c._id)}>
-            Deactivate
-          </Button>
-        ) : null,
-    },
-  ];
+  const { coupons, isLoading, error, toggleStatus, deleteCoupon } = useCoupons();
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Coupons</h1>
-        <Link href="/coupons/new">
-          <Button size="sm">Create Coupon</Button>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between flex-shrink-0">
+        <h1 className="text-2xl font-bold text-slate-900">Coupons</h1>
+        <Link
+          href="/coupons/new"
+          className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+        >
+          + New Coupon
         </Link>
       </div>
 
       {error && <Alert variant="error" message={error} />}
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-16">
           <Spinner size="lg" />
         </div>
       ) : (
-        <Table columns={columns} rows={coupons} emptyMessage="No coupons yet" />
+        <CouponList
+          coupons={coupons}
+          onToggleStatus={toggleStatus}
+          onDelete={deleteCoupon}
+        />
       )}
     </div>
   );

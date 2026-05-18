@@ -53,7 +53,7 @@ export async function generatePDF(orderId: string): Promise<Buffer> {
     doc.font('Helvetica');
     for (const item of order.items) {
       const y = doc.y;
-      doc.text(item.menuItemName, 50, y, { width: 250 });
+      doc.text(item.itemName, 50, y, { width: 250 });
       doc.text(String(item.quantity), 300, y, { width: 60, align: 'right' });
       doc.text(`${sym}${item.unitPrice.toFixed(2)}`, 360, y, { width: 80, align: 'right' });
       doc.text(`${sym}${item.subtotal.toFixed(2)}`, 440, y, { width: 90, align: 'right' });

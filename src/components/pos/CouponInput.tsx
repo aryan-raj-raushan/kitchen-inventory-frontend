@@ -1,17 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/common/Button';
 import type { CouponValidationResult } from '@/types';
 
 interface CouponInputProps {
   onApplyCoupon: (code: string) => void;
   isValidating: boolean;
   result: CouponValidationResult | null;
+  currencySymbol?: string;
 }
 
-export function CouponInput({ onApplyCoupon, isValidating, result }: CouponInputProps) {
+export function CouponInput({ onApplyCoupon, isValidating, result, currencySymbol = '₹' }: CouponInputProps) {
   const [code, setCode] = useState('');
+
+  function handleApply() {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    onApplyCoupon(trimmed);
+  }
 
   return (
     <div className="space-y-1.5">
@@ -20,26 +26,26 @@ export function CouponInput({ onApplyCoupon, isValidating, result }: CouponInput
           type="text"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
+          onKeyDown={(e) => e.key === 'Enter' && handleApply()}
           placeholder="COUPON CODE"
-          className="flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
-        <Button
-          size="sm"
-          variant="secondary"
-          loading={isValidating}
-          onClick={() => onApplyCoupon(code)}
+        <button
           type="button"
+          disabled={isValidating || !code.trim()}
+          onClick={handleApply}
+          className="px-3 py-2 text-sm font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
         >
-          Apply
-        </Button>
+          {isValidating ? '…' : 'Apply'}
+        </button>
       </div>
-      {result && result.valid && (
-        <p className="text-xs text-green-600">
-          Coupon applied — saves ${result.discountAmount.toFixed(2)}
+      {result?.valid && (
+        <p className="text-xs text-emerald-600 font-medium">
+          ✓ Coupon applied — saves {currencySymbol}{result.discountAmount.toFixed(2)}
         </p>
       )}
       {result && !result.valid && (
-        <p className="text-xs text-red-500">{result.reason ?? 'Invalid coupon'}</p>
+        <p className="text-xs text-red-500">✕ {result.reason ?? 'Invalid coupon'}</p>
       )}
     </div>
   );

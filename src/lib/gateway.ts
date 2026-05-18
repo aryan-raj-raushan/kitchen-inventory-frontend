@@ -63,6 +63,8 @@ export const gateway = {
     request<T>('POST', path, body, opts),
   put: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
     request<T>('PUT', path, body, opts),
+  patch: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
+    request<T>('PATCH', path, body, opts),
   delete: <T>(path: string, opts?: RequestOptions) =>
     request<T>('DELETE', path, undefined, opts),
 };
