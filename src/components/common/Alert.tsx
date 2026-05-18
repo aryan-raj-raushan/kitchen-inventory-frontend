@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { X, AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react';
 
 type AlertVariant = 'error' | 'warning' | 'success' | 'info';
 
@@ -11,11 +12,11 @@ const variantClasses: Record<AlertVariant, string> = {
   info: 'bg-indigo-50 border-indigo-200 text-indigo-700',
 };
 
-const icons: Record<AlertVariant, string> = {
-  error: '✕',
-  warning: '⚠',
-  success: '✓',
-  info: 'ℹ',
+const icons: Record<AlertVariant, React.ComponentType<{ size?: number; className?: string }>> = {
+  error: XCircle,
+  warning: AlertTriangle,
+  success: CheckCircle2,
+  info: Info,
 };
 
 interface AlertProps {
@@ -28,12 +29,14 @@ export function Alert({ variant = 'info', message, dismissible = true }: AlertPr
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
 
+  const Icon = icons[variant];
+
   return (
     <div
       role="alert"
       className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${variantClasses[variant]}`}
     >
-      <span className="shrink-0 font-bold">{icons[variant]}</span>
+      <Icon size={15} className="shrink-0 mt-0.5" />
       <span className="flex-1">{message}</span>
       {dismissible && (
         <button
@@ -41,7 +44,7 @@ export function Alert({ variant = 'info', message, dismissible = true }: AlertPr
           className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
           aria-label="Dismiss"
         >
-          ✕
+          <X size={14} />
         </button>
       )}
     </div>

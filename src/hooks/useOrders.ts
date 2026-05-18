@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { getOrders, cancelOrder } from '@/services/order.service';
 import { downloadInvoice } from '@/services/invoice.service';
 import type { IOrder } from '@/types';
@@ -20,7 +21,8 @@ export function useOrders() {
       setOrders(res.orders);
       setTotal(res.total);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load orders');
+      const msg = e instanceof Error ? e.message : 'Failed to load orders';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -29,17 +31,23 @@ export function useOrders() {
   async function cancel(id: string) {
     try {
       await cancelOrder(id);
+      toast.success('Order cancelled');
       await fetchOrders({ page });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to cancel order');
+      const msg = e instanceof Error ? e.message : 'Failed to cancel order';
+      setError(msg);
+      toast.error(msg);
     }
   }
 
   async function handleDownloadInvoice(orderId: string) {
     try {
       await downloadInvoice(orderId);
+      toast.success('Invoice downloaded');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to download invoice');
+      const msg = e instanceof Error ? e.message : 'Failed to download invoice';
+      setError(msg);
+      toast.error(msg);
     }
   }
 

@@ -1,13 +1,22 @@
 import 'server-only';
+import mongoose from 'mongoose';
 import * as repo from '../repositories/coupon.repository';
 import { ConflictError, NotFoundError } from '@/lib/errors';
 import type { CreateCouponRequest, UpdateCouponRequest, CouponValidationResult } from '@/types';
+
+async function resolve(codeOrId: string): Promise<string> {
+  if (mongoose.Types.ObjectId.isValid(codeOrId)) return codeOrId;
+  const coupon = await repo.findByCode(codeOrId);
+  if (!coupon) throw new NotFoundError('Coupon not found');
+  return (coupon._id as mongoose.Types.ObjectId).toString();
+}
 
 export async function getAll() {
   return repo.findAll();
 }
 
-export async function getById(id: string) {
+export async function getById(codeOrId: string) {
+  const id = await resolve(codeOrId);
   const coupon = await repo.findById(id);
   if (!coupon) throw new NotFoundError('Coupon not found');
   return coupon;
@@ -19,19 +28,22 @@ export async function create(dto: CreateCouponRequest) {
   return repo.create({ ...dto, code: dto.code.toUpperCase() });
 }
 
-export async function update(id: string, dto: UpdateCouponRequest) {
+export async function update(codeOrId: string, dto: UpdateCouponRequest) {
+  const id = await resolve(codeOrId);
   const coupon = await repo.update(id, dto);
   if (!coupon) throw new NotFoundError('Coupon not found');
   return coupon;
 }
 
-export async function remove(id: string) {
+export async function remove(codeOrId: string) {
+  const id = await resolve(codeOrId);
   const coupon = await repo.remove(id);
   if (!coupon) throw new NotFoundError('Coupon not found');
   return coupon;
 }
 
-export async function deactivate(id: string) {
+export async function deactivate(codeOrId: string) {
+  const id = await resolve(codeOrId);
   const coupon = await repo.update(id, { status: 'DEACTIVATED' });
   if (!coupon) throw new NotFoundError('Coupon not found');
   return coupon;

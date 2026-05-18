@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Sunrise } from 'lucide-react';
 import { useDailyReset } from '@/hooks/useDailyReset';
 
 interface DailyResetPromptProps {
@@ -35,12 +36,14 @@ export function DailyResetPrompt({ onConfirmed }: DailyResetPromptProps) {
   }
 
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-4">
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-4 animate-fade-in">
       <div className="flex items-start gap-3">
-        <span className="text-2xl">🌅</span>
+        <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+          <Sunrise size={16} className="text-amber-600" />
+        </div>
         <div>
-          <h2 className="font-semibold text-amber-900">Daily Reset — Enter Today&apos;s Quantities</h2>
-          <p className="text-sm text-amber-700 mt-0.5">
+          <h2 className="font-semibold text-amber-900 text-sm">Daily Reset — Enter Today&apos;s Quantities</h2>
+          <p className="text-xs text-amber-700 mt-0.5">
             {pendingItems.length} item{pendingItems.length > 1 ? 's' : ''} need today&apos;s starting quantity.
           </p>
         </div>
@@ -55,6 +58,9 @@ export function DailyResetPrompt({ onConfirmed }: DailyResetPromptProps) {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-900 truncate">{item.name}</p>
               <p className="text-xs text-slate-400">{item.unit}</p>
+              {errors[item._id] && (
+                <p className="text-xs text-red-500 mt-0.5">{errors[item._id]}</p>
+              )}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <input
@@ -68,14 +74,11 @@ export function DailyResetPrompt({ onConfirmed }: DailyResetPromptProps) {
               <button
                 onClick={() => handleConfirm(item._id)}
                 disabled={submitting === item._id}
-                className="px-3 py-1.5 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50"
+                className="px-3 py-1.5 bg-amber-500 text-white text-xs font-semibold rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
               >
                 {submitting === item._id ? '…' : 'Set'}
               </button>
             </div>
-            {errors[item._id] && (
-              <p className="text-xs text-red-500 col-span-full">{errors[item._id]}</p>
-            )}
           </div>
         ))}
       </div>

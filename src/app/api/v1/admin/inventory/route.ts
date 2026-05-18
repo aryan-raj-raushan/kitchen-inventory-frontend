@@ -11,6 +11,8 @@ const CreateSchema = z.object({
   categoryId: z.string().min(1),
   unit: z.string().min(1),
   price: z.number().min(0),
+  discountType: z.enum(['PERCENTAGE', 'FIXED_AMOUNT']).nullish(),
+  discountValue: z.number().min(0).optional(),
   currentQuantity: z.number().min(0),
   dailyReset: z.boolean().default(false),
   imageUrl: z.string().optional(),

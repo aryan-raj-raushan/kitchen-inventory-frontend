@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Plus } from 'lucide-react';
 import { useCoupons } from '@/hooks/useCoupons';
 import { CouponList } from '@/components/coupons/CouponList';
 import { Alert } from '@/components/common/Alert';
@@ -15,9 +16,10 @@ export default function CouponsPage() {
         <h1 className="text-2xl font-bold text-slate-900">Coupons</h1>
         <Link
           href="/coupons/new"
-          className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
         >
-          + New Coupon
+          <Plus size={16} />
+          New Coupon
         </Link>
       </div>
 

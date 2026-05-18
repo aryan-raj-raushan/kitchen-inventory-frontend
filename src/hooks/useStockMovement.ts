@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { recordMovement } from '@/services/inventory.service';
 
 export function useStockMovement(onSuccess?: () => void) {
@@ -17,9 +18,12 @@ export function useStockMovement(onSuccess?: () => void) {
     setError(null);
     try {
       await recordMovement(itemId, { movementType, quantityDelta, notes });
+      toast.success(movementType === 'MANUAL_IN' ? 'Stock added' : 'Stock removed');
       onSuccess?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to record movement');
+      const msg = e instanceof Error ? e.message : 'Failed to record movement';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }

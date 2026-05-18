@@ -7,6 +7,9 @@ interface CustomerFormProps {
 }
 
 export function CustomerForm({ name, phone, onChange }: CustomerFormProps) {
+  const inputClass =
+    'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500';
+
   return (
     <div className="space-y-2">
       <div>
@@ -16,7 +19,7 @@ export function CustomerForm({ name, phone, onChange }: CustomerFormProps) {
           value={name}
           onChange={(e) => onChange('name', e.target.value)}
           placeholder="Full name"
-          className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={inputClass}
         />
       </div>
       <div>
@@ -26,7 +29,7 @@ export function CustomerForm({ name, phone, onChange }: CustomerFormProps) {
           value={phone}
           onChange={(e) => onChange('phone', e.target.value)}
           placeholder="+1 555-0000"
-          className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={inputClass}
         />
       </div>
     </div>

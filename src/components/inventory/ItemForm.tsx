@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useForm, Controller, type Resolver } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { InlineCategoryCreate } from '@/components/categories/InlineCategoryCreate';
+import { CategoryManager } from '@/components/categories/CategoryManager';
 import { uploadImage } from '@/services/inventory.service';
 import { gateway } from '@/lib/gateway';
 import type { IInventoryItem, ICategory } from '@/types';
@@ -14,6 +14,8 @@ const schema = z.object({
   categoryId: z.string().min(1, 'Category required'),
   unit: z.string().min(1, 'Unit required'),
   price: z.coerce.number().min(0, 'Price must be ≥ 0'),
+  discountType: z.enum(['PERCENTAGE', 'FIXED_AMOUNT']).nullish(),
+  discountValue: z.coerce.number().min(0).optional(),
   currentQuantity: z.coerce.number().min(0, 'Quantity must be ≥ 0'),
   dailyReset: z.boolean(),
   imageUrl: z.string().optional(),
@@ -52,15 +54,17 @@ export function ItemForm({ defaultValues, onSubmit, isSubmitting, error }: ItemF
     handleSubmit,
     setValue,
     watch,
-    control,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema) as Resolver<FormValues>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       name: defaultValues?.name ?? '',
       categoryId: defaultCategoryId,
       unit: defaultValues?.unit ?? '',
       price: defaultValues?.price ?? 0,
+      discountType: defaultValues?.discountType ?? null,
+      discountValue: defaultValues?.discountValue ?? 0,
       currentQuantity: defaultValues?.currentQuantity ?? 0,
       dailyReset: defaultValues?.dailyReset ?? false,
       imageUrl: defaultValues?.imageUrl ?? '',
@@ -69,6 +73,7 @@ export function ItemForm({ defaultValues, onSubmit, isSubmitting, error }: ItemF
   });
 
   const imageUrl = watch('imageUrl');
+  const discountType = watch('discountType');
 
   useEffect(() => {
     gateway.get<ICategory[]>('/admin/categories')
@@ -114,34 +119,30 @@ export function ItemForm({ defaultValues, onSubmit, isSubmitting, error }: ItemF
         {errors.name && <p className={errClass}>{errors.name.message}</p>}
       </div>
 
-      {/* Category — controlled via Controller to avoid async timing issues */}
+      {/* Category — full CRUD manager */}
       <div>
         <label className={labelClass}>Category</label>
-        <Controller
-          control={control}
-          name="categoryId"
-          render={({ field }) => (
-            <select {...field} className={inputClass}>
-              <option value="">Select category…</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>{c.name}</option>
-              ))}
-            </select>
-          )}
-        />
-        {errors.categoryId && <p className={errClass}>{errors.categoryId.message}</p>}
-        <InlineCategoryCreate
+        <CategoryManager
+          categories={categories}
+          selectedId={watch('categoryId')}
+          onSelect={(id) => setValue('categoryId', id, { shouldValidate: true })}
           onCreated={(cat) => {
-            setCategories((prev) =>
-              [...prev, cat].sort((a, b) => a.name.localeCompare(b.name))
-            );
+            setCategories((prev) => [...prev, cat].sort((a, b) => a.name.localeCompare(b.name)));
             setValue('categoryId', cat._id, { shouldValidate: true });
           }}
+          onUpdated={(cat) => {
+            setCategories((prev) => prev.map((c) => (c._id === cat._id ? cat : c)).sort((a, b) => a.name.localeCompare(b.name)));
+          }}
+          onDeleted={(id) => {
+            setCategories((prev) => prev.filter((c) => c._id !== id));
+            if (watch('categoryId') === id) setValue('categoryId', '', { shouldValidate: true });
+          }}
         />
+        {errors.categoryId && <p className={errClass}>{errors.categoryId.message}</p>}
       </div>
 
       {/* Unit + Price */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={labelClass}>Unit</label>
           <input
@@ -163,6 +164,41 @@ export function ItemForm({ defaultValues, onSubmit, isSubmitting, error }: ItemF
           />
           {errors.price && <p className={errClass}>{errors.price.message}</p>}
         </div>
+      </div>
+
+      {/* Discount */}
+      <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+        <p className="text-sm font-medium text-slate-700">Discount (optional)</p>
+        <div className="flex flex-wrap gap-3">
+          {([null, 'PERCENTAGE', 'FIXED_AMOUNT'] as const).map((t) => (
+            <label key={String(t)} className="flex items-center gap-2 cursor-pointer text-sm">
+              <input
+                type="radio"
+                className="accent-indigo-600"
+                checked={discountType === t}
+                onChange={() => setValue('discountType', t, { shouldValidate: true })}
+              />
+              {t === null ? 'No discount' : t === 'PERCENTAGE' ? 'Percentage (%)' : 'Fixed amount (₹)'}
+            </label>
+          ))}
+        </div>
+        {discountType && (
+          <div>
+            <label className={labelClass}>
+              {discountType === 'PERCENTAGE' ? 'Discount %' : 'Discount amount (₹)'}
+            </label>
+            <input
+              {...register('discountValue')}
+              type="number"
+              min="0"
+              max={discountType === 'PERCENTAGE' ? '100' : undefined}
+              step="0.01"
+              className={inputClass}
+              placeholder={discountType === 'PERCENTAGE' ? '10' : '20.00'}
+            />
+            {errors.discountValue && <p className={errClass}>{errors.discountValue.message}</p>}
+          </div>
+        )}
       </div>
 
       {/* Quantity */}
@@ -236,7 +272,7 @@ export function ItemForm({ defaultValues, onSubmit, isSubmitting, error }: ItemF
           <label className={labelClass}>Status</label>
           <select
             {...register('status')}
-            className="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="ACTIVE">Active</option>
             <option value="INACTIVE">Inactive</option>

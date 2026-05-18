@@ -16,6 +16,7 @@ export function InlineCategoryCreate({ onCreated }: InlineCategoryCreateProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    e.stopPropagation();
     if (!name.trim()) return;
     setLoading(true);
     setError('');

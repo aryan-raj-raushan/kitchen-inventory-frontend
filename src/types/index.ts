@@ -19,9 +19,12 @@ export interface ICategory {
 export interface IInventoryItem {
   _id: string;
   name: string;
+  slug?: string;
   categoryId: string;
   unit: string;
   price: number;
+  discountType?: 'PERCENTAGE' | 'FIXED_AMOUNT' | null;
+  discountValue?: number;
   currentQuantity: number;
   dailyReset: boolean;
   imageUrl?: string;
@@ -134,6 +137,8 @@ export interface CreateInventoryItemRequest {
   categoryId: string;
   unit: string;
   price: number;
+  discountType?: 'PERCENTAGE' | 'FIXED_AMOUNT' | null;
+  discountValue?: number;
   currentQuantity: number;
   dailyReset: boolean;
   imageUrl?: string;
@@ -161,10 +166,10 @@ export interface CreateOrderRequest {
   customerName: string;
   customerPhone: string;
   couponCode?: string;
-  items: Array<{
-    inventoryItemId: string;
-    quantity: number;
-  }>;
+  items: Array<
+    | { inventoryItemId: string; quantity: number }
+    | { comboId: string; quantity: number }
+  >;
 }
 
 export interface CouponValidationRequest {
@@ -218,6 +223,39 @@ export interface PaginatedResponse<T> {
   limit: number;
 }
 
+// ─── Combo / Thali ───────────────────────────────────────────────────────────
+
+export interface IComboComponent {
+  inventoryItemId: string;
+  itemName: string;
+  quantity: number;
+}
+
+export interface ICombo {
+  _id: string;
+  name: string;
+  slug?: string;
+  price: number;
+  imageUrl?: string;
+  description?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  components: IComboComponent[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateComboRequest {
+  name: string;
+  price: number;
+  imageUrl?: string;
+  description?: string;
+  components: Array<{ inventoryItemId: string; quantity: number }>;
+}
+
+export interface UpdateComboRequest extends Partial<CreateComboRequest> {
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
 // ─── Cart (client-side POS state) ────────────────────────────────────────────
 
 export interface CartItem {
@@ -225,6 +263,7 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  isCombo?: boolean;
 }
 
 // ─── POS ─────────────────────────────────────────────────────────────────────
@@ -233,9 +272,21 @@ export interface POSItem {
   _id: string;
   name: string;
   price: number;
+  discountType?: 'PERCENTAGE' | 'FIXED_AMOUNT' | null;
+  discountValue?: number;
   currentQuantity: number;
   unit: string;
   imageUrl?: string;
   categoryId: string;
   categoryName: string;
+}
+
+export interface POSComboItem {
+  _id: string;
+  name: string;
+  price: number;
+  imageUrl?: string;
+  description?: string;
+  isCombo: true;
+  components: IComboComponent[];
 }

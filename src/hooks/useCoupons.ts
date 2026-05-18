@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { getAll, remove as removeCoupon, update } from '@/services/coupon.service';
 import type { ICoupon } from '@/types';
 
@@ -16,7 +17,8 @@ export function useCoupons() {
       const data = await getAll();
       setCoupons(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load coupons');
+      const msg = e instanceof Error ? e.message : 'Failed to load coupons';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -26,18 +28,24 @@ export function useCoupons() {
     try {
       const nextStatus = coupon.status === 'ACTIVE' ? 'DEACTIVATED' : 'ACTIVE';
       await update(coupon._id, { status: nextStatus });
+      toast.success(nextStatus === 'ACTIVE' ? 'Coupon activated' : 'Coupon deactivated');
       await refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to update coupon');
+      const msg = e instanceof Error ? e.message : 'Failed to update coupon';
+      setError(msg);
+      toast.error(msg);
     }
   }
 
   async function deleteCoupon(id: string) {
     try {
       await removeCoupon(id);
+      toast.success('Coupon deleted');
       await refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to delete coupon');
+      const msg = e instanceof Error ? e.message : 'Failed to delete coupon';
+      setError(msg);
+      toast.error(msg);
     }
   }
 

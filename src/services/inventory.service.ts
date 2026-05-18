@@ -30,7 +30,11 @@ export async function update(id: string, data: UpdateInventoryItemRequest): Prom
   return gateway.patch<IInventoryItem>(`/admin/inventory/${id}`, data);
 }
 
-export async function deactivate(id: string): Promise<void> {
+export async function deactivate(id: string): Promise<IInventoryItem> {
+  return gateway.put<IInventoryItem>(`/admin/inventory/${id}`);
+}
+
+export async function remove(id: string): Promise<void> {
   await gateway.delete(`/admin/inventory/${id}`);
 }
 

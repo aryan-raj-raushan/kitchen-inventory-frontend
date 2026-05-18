@@ -12,7 +12,7 @@ export default function POSPage() {
   const cart = useCart();
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-4">
+    <div className="flex flex-col lg:flex-1 lg:min-h-0 gap-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <h1 className="text-2xl font-bold text-slate-900">Point of Sale</h1>
@@ -26,9 +26,9 @@ export default function POSPage() {
       {pos.error && <Alert variant="error" message={pos.error} />}
 
       {/* Two-panel layout */}
-      <div className="flex flex-col lg:flex-row gap-5 flex-1 min-h-0">
-        {/* Inventory grid — scrollable */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-col lg:flex-row gap-5 lg:flex-1 lg:min-h-0">
+        {/* Inventory grid — scrollable on desktop, natural on mobile */}
+        <div className="lg:flex-1 lg:min-h-0 lg:overflow-hidden">
           <InventoryGrid onAddItem={cart.addItem} />
         </div>
 
@@ -51,7 +51,7 @@ export default function POSPage() {
       </div>
 
       {pos.orderResult && (
-        <Modal title="Order Confirmed ✓" onClose={pos.resetOrder}>
+        <Modal title="Order Confirmed" onClose={pos.resetOrder}>
           <div className="space-y-4">
             <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-5 text-center">
               <p className="text-3xl font-bold text-emerald-700">{pos.orderResult.invoiceNumber}</p>

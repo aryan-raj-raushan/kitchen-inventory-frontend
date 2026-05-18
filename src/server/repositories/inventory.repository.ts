@@ -20,6 +20,10 @@ export async function findById(id: string): Promise<IInventoryItemDoc | null> {
   return InventoryItem.findById(id).populate('categoryId');
 }
 
+export async function findBySlug(slug: string): Promise<IInventoryItemDoc | null> {
+  return InventoryItem.findOne({ slug }).populate('categoryId');
+}
+
 export async function create(data: CreateInventoryItemRequest): Promise<IInventoryItemDoc> {
   return InventoryItem.create(data);
 }
@@ -35,6 +39,11 @@ export async function update(
 export async function deactivate(id: string): Promise<IInventoryItemDoc | null> {
   if (!mongoose.Types.ObjectId.isValid(id)) return null;
   return InventoryItem.findByIdAndUpdate(id, { status: 'INACTIVE' }, { new: true });
+}
+
+export async function remove(id: string): Promise<IInventoryItemDoc | null> {
+  if (!mongoose.Types.ObjectId.isValid(id)) return null;
+  return InventoryItem.findByIdAndDelete(id);
 }
 
 export async function findByIds(ids: string[]): Promise<IInventoryItemDoc[]> {

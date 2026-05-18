@@ -47,7 +47,11 @@ export function usePOS() {
         customerName,
         customerPhone,
         couponCode: couponCode || undefined,
-        items: cartItems.map((i) => ({ inventoryItemId: i.inventoryItemId, quantity: i.quantity })),
+        items: cartItems.map((i) =>
+          i.isCombo
+            ? { comboId: i.inventoryItemId, quantity: i.quantity }
+            : { inventoryItemId: i.inventoryItemId, quantity: i.quantity }
+        ),
       });
       setOrderResult(order);
       clearCart();

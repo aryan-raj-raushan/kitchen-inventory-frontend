@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { gateway } from '@/lib/gateway';
 
 interface PendingItem {
@@ -35,8 +36,15 @@ export function useDailyReset() {
   }
 
   async function confirmQuantity(itemId: string, quantity: number) {
-    await gateway.post(`/admin/inventory/daily-reset/${itemId}`, { quantity });
-    await fetchPendingResets();
+    try {
+      await gateway.post(`/admin/inventory/daily-reset/${itemId}`, { quantity });
+      toast.success('Daily quantity confirmed');
+      await fetchPendingResets();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to confirm quantity';
+      toast.error(msg);
+      throw e;
+    }
   }
 
   useEffect(() => {
