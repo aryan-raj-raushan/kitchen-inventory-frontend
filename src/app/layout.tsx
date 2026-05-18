@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Restaurant POS',
-  description: 'Point of Sale & Inventory Management',
+  title: 'Kitchen Inventory',
+  description: 'Kitchen Inventory & Point of Sale Management',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
