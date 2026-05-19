@@ -44,7 +44,7 @@ export function CartPanel({
         <h2 className="font-bold text-slate-900">Current Order</h2>
       </div>
 
-      <div className="overflow-y-auto lg:flex-1 max-h-64 lg:max-h-none px-5 py-3 space-y-2">
+      <div className="overflow-y-auto lg:flex-1 lg:min-h-0 max-h-56 lg:max-h-none px-5 py-3 space-y-2">
         {items.length === 0 && (
           <p className="text-slate-400 text-sm py-6 text-center">Add items to start an order</p>
         )}

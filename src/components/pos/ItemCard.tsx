@@ -32,7 +32,7 @@ export function ItemCard({ item, onAdd, currencySymbol = '₹' }: POSItemCardPro
       onClick={() => onAdd(item)}
       className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all text-left overflow-hidden group w-full"
     >
-      <div className="relative h-28 bg-slate-100">
+      <div className="relative h-40 bg-slate-100">
         {item.imageUrl ? (
           <Image
             src={item.imageUrl}
@@ -89,7 +89,7 @@ export function ComboCard({ item, onAdd, currencySymbol = '₹' }: ComboCardProp
       onClick={() => onAdd(item)}
       className="bg-white rounded-2xl border border-indigo-100 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all text-left overflow-hidden group w-full"
     >
-      <div className="relative h-28 bg-indigo-50">
+      <div className="relative h-40 bg-indigo-50">
         {item.imageUrl ? (
           <Image
             src={item.imageUrl}

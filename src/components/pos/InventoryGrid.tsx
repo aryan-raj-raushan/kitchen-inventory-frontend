@@ -10,13 +10,24 @@ interface InventoryGridProps {
   currencySymbol?: string;
 }
 
-function getSalePrice(price: number, discountType?: string | null, discountValue?: number): number {
+function getSalePrice(
+  price: number,
+  discountType?: string | null,
+  discountValue?: number
+): number {
   if (!discountType || !discountValue) return price;
-  if (discountType === 'PERCENTAGE') return Math.max(0, price * (1 - discountValue / 100));
+
+  if (discountType === 'PERCENTAGE') {
+    return Math.max(0, price * (1 - discountValue / 100));
+  }
+
   return Math.max(0, price - discountValue);
 }
 
-export function InventoryGrid({ onAddItem, currencySymbol = '₹' }: InventoryGridProps) {
+export function InventoryGrid({
+  onAddItem,
+  currencySymbol = '₹',
+}: InventoryGridProps) {
   const [items, setItems] = useState<POSItem[]>([]);
   const [combos, setCombos] = useState<POSComboItem[]>([]);
   const [categories, setCategories] = useState<ICategory[]>([]);
@@ -26,30 +37,48 @@ export function InventoryGrid({ onAddItem, currencySymbol = '₹' }: InventoryGr
 
   useEffect(() => {
     const params = new URLSearchParams();
-    if (activeCategory !== 'all') params.set('category', activeCategory);
-    if (search.trim()) params.set('search', search.trim());
-    const query = params.toString() ? `?${params}` : '';
+
+    if (activeCategory !== 'all') {
+      params.set('category', activeCategory);
+    }
+
+    if (search.trim()) {
+      params.set('search', search.trim());
+    }
+
+    const query = params.toString() ? `?${params.toString()}` : '';
 
     setLoading(true);
+
     Promise.all([
-      gateway.get<POSItem[]>(`/admin/pos/items${query}`).catch(() => [] as POSItem[]),
+      gateway
+        .get<POSItem[]>(`/admin/pos/items${query}`)
+        .catch(() => [] as POSItem[]),
+
       activeCategory === 'all' && !search.trim()
-        ? gateway.get<POSComboItem[]>('/admin/pos/combos').catch(() => [] as POSComboItem[])
+        ? gateway
+            .get<POSComboItem[]>('/admin/pos/combos')
+            .catch(() => [] as POSComboItem[])
         : Promise.resolve([] as POSComboItem[]),
     ])
-      .then(([posItems, posCompos]) => {
+      .then(([posItems, posCombos]) => {
         setItems(posItems);
-        setCombos(posCompos);
+        setCombos(posCombos);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+      });
   }, [activeCategory, search]);
 
   useEffect(() => {
-    gateway.get<ICategory[]>('/admin/categories').then(setCategories).catch(() => {});
+    gateway
+      .get<ICategory[]>('/admin/categories')
+      .then(setCategories)
+      .catch(() => {});
   }, []);
 
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className="flex flex-col lg:h-full min-h-0 gap-4">
       {/* Search */}
       <input
         type="text"
@@ -59,7 +88,7 @@ export function InventoryGrid({ onAddItem, currencySymbol = '₹' }: InventoryGr
         className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
       />
 
-      {/* Category tabs */}
+      {/* Category Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1 flex-shrink-0">
         <button
           onClick={() => setActiveCategory('all')}
@@ -71,6 +100,7 @@ export function InventoryGrid({ onAddItem, currencySymbol = '₹' }: InventoryGr
         >
           All
         </button>
+
         {categories.map((cat) => (
           <button
             key={cat._id}
@@ -86,35 +116,57 @@ export function InventoryGrid({ onAddItem, currencySymbol = '₹' }: InventoryGr
         ))}
       </div>
 
-      {/* Items grid */}
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">Loading…</div>
-      ) : items.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">No items available</div>
-      ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 content-start">
-          {combos.map((combo) => (
-            <ComboCard
-              key={`combo-${combo._id}`}
-              item={combo}
-              currencySymbol={currencySymbol}
-              onAdd={(c) => onAddItem({ inventoryItemId: c._id, name: c.name, price: c.price, isCombo: true })}
-            />
-          ))}
-          {items.map((item) => (
-            <ItemCard
-              key={item._id}
-              item={item}
-              currencySymbol={currencySymbol}
-              onAdd={(i) => onAddItem({
-                inventoryItemId: i._id,
-                name: i.name,
-                price: getSalePrice(i.price, i.discountType, i.discountValue),
-              })}
-            />
-          ))}
-        </div>
-      )}
+      {/* Scrollable Items Area */}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+        {loading ? (
+          <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+            Loading…
+          </div>
+        ) : items.length === 0 && combos.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+            No items available
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 content-start">
+            {/* Combo Cards */}
+            {combos.map((combo) => (
+              <ComboCard
+                key={`combo-${combo._id}`}
+                item={combo}
+                currencySymbol={currencySymbol}
+                onAdd={(c) =>
+                  onAddItem({
+                    inventoryItemId: c._id,
+                    name: c.name,
+                    price: c.price,
+                    isCombo: true,
+                  })
+                }
+              />
+            ))}
+
+            {/* Item Cards */}
+            {items.map((item) => (
+              <ItemCard
+                key={item._id}
+                item={item}
+                currencySymbol={currencySymbol}
+                onAdd={(i) =>
+                  onAddItem({
+                    inventoryItemId: i._id,
+                    name: i.name,
+                    price: getSalePrice(
+                      i.price,
+                      i.discountType,
+                      i.discountValue
+                    ),
+                  })
+                }
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
