@@ -1,6 +1,7 @@
 import 'server-only';
 import mongoose from 'mongoose';
 import { InventoryItem, IInventoryItemDoc } from '../models/InventoryItem';
+import '../models/Category'; // register model so populate('categoryId') works
 import type { CreateInventoryItemRequest, UpdateInventoryItemRequest } from '@/types';
 
 export async function findAll(filters?: {
