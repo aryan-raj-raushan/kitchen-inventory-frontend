@@ -1,20 +1,39 @@
 'use client';
 
 import { useState } from 'react';
-import { Sunrise } from 'lucide-react';
+import { Sunrise, CheckCircle2 } from 'lucide-react';
 import { useDailyReset } from '@/hooks/useDailyReset';
+import { Spinner } from '@/components/common/Spinner';
 
 interface DailyResetPromptProps {
   onConfirmed?: () => void;
+  showEmpty?: boolean;
 }
 
-export function DailyResetPrompt({ onConfirmed }: DailyResetPromptProps) {
+export function DailyResetPrompt({ onConfirmed, showEmpty }: DailyResetPromptProps) {
   const { pendingItems, isLoading, confirmQuantity } = useDailyReset();
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  if (isLoading || pendingItems.length === 0) return null;
+  if (isLoading) {
+    return showEmpty ? (
+      <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+    ) : null;
+  }
+
+  if (pendingItems.length === 0) {
+    if (!showEmpty) return null;
+    return (
+      <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mb-4">
+          <CheckCircle2 size={28} className="text-emerald-500" />
+        </div>
+        <p className="font-semibold text-slate-800">All quantities confirmed</p>
+        <p className="text-sm text-slate-400 mt-1">No items pending for today&apos;s reset.</p>
+      </div>
+    );
+  }
 
   async function handleConfirm(itemId: string) {
     const rawQty = quantities[itemId];

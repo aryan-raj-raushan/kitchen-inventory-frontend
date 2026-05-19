@@ -9,12 +9,13 @@ import {
   AlertCircle,
   RotateCcw,
   X,
+  Sunrise,
 } from 'lucide-react';
 import { useInventory } from '@/hooks/useInventory';
 import { useStockMovement } from '@/hooks/useStockMovement';
+import { useDailyReset } from '@/hooks/useDailyReset';
 import { ItemCard } from '@/components/inventory/ItemCard';
 import { MovementForm } from '@/components/inventory/MovementForm';
-import { DailyResetPrompt } from '@/components/inventory/DailyResetPrompt';
 import { Modal } from '@/components/common/Modal';
 import { Alert } from '@/components/common/Alert';
 import { Spinner } from '@/components/common/Spinner';
@@ -39,6 +40,7 @@ function getCategoryName(raw: unknown): string {
 
 export default function InventoryPage() {
   const { items, isLoading, error, refetch, deactivate } = useInventory();
+  const { pendingItems } = useDailyReset();
   const [selectedItem, setSelectedItem] = useState<IInventoryItem | null>(null);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -84,8 +86,6 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-5">
-      <DailyResetPrompt onConfirmed={refetch} />
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -94,13 +94,24 @@ export default function InventoryPage() {
             <p className="text-sm text-slate-400 mt-0.5">{stats.active} active items</p>
           )}
         </div>
-        <Link
-          href="/inventory/new"
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
-        >
-          <Plus size={16} />
-          Add Item
-        </Link>
+        <div className="flex items-center gap-2">
+          {pendingItems.length > 0 && (
+            <Link
+              href="/inventory/daily-reset"
+              className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 text-white text-xs font-semibold rounded-xl hover:bg-amber-600 transition-colors shadow-sm animate-fade-in"
+            >
+              <Sunrise size={13} />
+              Daily Reset ({pendingItems.length})
+            </Link>
+          )}
+          <Link
+            href="/inventory/new"
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+          >
+            <Plus size={16} />
+            Add Item
+          </Link>
+        </div>
       </div>
 
       {error && <Alert variant="error" message={error} />}

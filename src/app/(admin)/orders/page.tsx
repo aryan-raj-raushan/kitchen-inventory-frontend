@@ -44,7 +44,6 @@ function OrderDetail({ order, onDownload, onCancel }: { order: IOrder; onDownloa
             <tr className="bg-slate-50 border-b border-slate-100">
               <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500">Item</th>
               <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500">Qty</th>
-              <th className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500">Unit</th>
               <th className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500">Total</th>
             </tr>
           </thead>
@@ -53,7 +52,6 @@ function OrderDetail({ order, onDownload, onCancel }: { order: IOrder; onDownloa
               <tr key={i} className="bg-white hover:bg-slate-50/60 transition-colors">
                 <td className="px-4 py-2.5 text-slate-800 font-medium">{item.itemName}</td>
                 <td className="px-4 py-2.5 text-center text-slate-600">{item.quantity}</td>
-                <td className="px-4 py-2.5 text-right text-slate-500">₹{(item.unitPrice ?? 0).toFixed(2)}</td>
                 <td className="px-4 py-2.5 text-right font-semibold text-slate-800">₹{(item.subtotal ?? 0).toFixed(2)}</td>
               </tr>
             ))}
