@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash2 } from 'lucide-react';
 import { gateway } from '@/lib/gateway';
-import type { ICombo, IInventoryItem, CreateComboRequest } from '@/types';
+import { ComponentItemPicker } from './ComponentItemPicker';
+import type { ICombo, IInventoryItem, ICategory, CreateComboRequest } from '@/types';
 
 const schema = z.object({
   name: z.string().min(1, 'Name required'),
@@ -31,6 +32,7 @@ interface ComponentRow {
 
 export function ComboForm({ defaultValues, onSubmit, isSubmitting, error }: ComboFormProps) {
   const [inventoryItems, setInventoryItems] = useState<IInventoryItem[]>([]);
+  const [categories, setCategories] = useState<ICategory[]>([]);
   const [components, setComponents] = useState<ComponentRow[]>(
     defaultValues?.components?.map((c) => ({
       inventoryItemId: c.inventoryItemId,
@@ -55,7 +57,13 @@ export function ComboForm({ defaultValues, onSubmit, isSubmitting, error }: Comb
   });
 
   useEffect(() => {
-    gateway.get<IInventoryItem[]>('/admin/inventory?status=ACTIVE').then(setInventoryItems).catch(() => {});
+    Promise.all([
+      gateway.get<IInventoryItem[]>('/admin/inventory?status=ACTIVE').catch(() => [] as IInventoryItem[]),
+      gateway.get<ICategory[]>('/admin/categories').catch(() => [] as ICategory[]),
+    ]).then(([items, cats]) => {
+      setInventoryItems(items);
+      setCategories(cats);
+    });
   }, []);
 
   function addComponent() {
@@ -66,8 +74,29 @@ export function ComboForm({ defaultValues, onSubmit, isSubmitting, error }: Comb
     setComponents((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function updateComponent(index: number, field: keyof ComponentRow, value: string | number) {
-    setComponents((prev) => prev.map((c, i) => (i === index ? { ...c, [field]: value } : c)));
+  function setComponentItem(index: number, id: string) {
+    setComponents((prev) => prev.map((c, i) => (i === index ? { ...c, inventoryItemId: id } : c)));
+  }
+
+  function setComponentQty(index: number, qty: number) {
+    setComponents((prev) => prev.map((c, i) => (i === index ? { ...c, quantity: qty } : c)));
+  }
+
+  function handleItemCreated(item: IInventoryItem) {
+    setInventoryItems((prev) => [...prev, item].sort((a, b) => a.name.localeCompare(b.name)));
+  }
+
+  function handleItemUpdated(item: IInventoryItem) {
+    setInventoryItems((prev) =>
+      prev.map((it) => (it._id === item._id ? item : it)).sort((a, b) => a.name.localeCompare(b.name))
+    );
+  }
+
+  function handleItemDeleted(id: string) {
+    setInventoryItems((prev) => prev.filter((it) => it._id !== id));
+    setComponents((prev) =>
+      prev.map((c) => (c.inventoryItemId === id ? { ...c, inventoryItemId: '' } : c))
+    );
   }
 
   async function handleFormSubmit(values: FormValues) {
@@ -131,43 +160,44 @@ export function ComboForm({ defaultValues, onSubmit, isSubmitting, error }: Comb
       {/* Components */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className={`${labelClass} mb-0`}>Components</label>
+          <label className={`${labelClass} mb-0`}>
+            Components
+            <span className="ml-1 text-slate-400 font-normal text-xs">— select, create, edit, or delete items</span>
+          </label>
           <button
             type="button"
             onClick={addComponent}
             className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800"
           >
-            <Plus size={12} /> Add item
+            <Plus size={12} /> Add row
           </button>
         </div>
+
         <div className="space-y-2">
           {components.map((comp, i) => (
-            <div key={i} className="flex gap-2 items-center">
-              <select
-                value={comp.inventoryItemId}
-                onChange={(e) => updateComponent(i, 'inventoryItemId', e.target.value)}
-                className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-              >
-                <option value="">Select item…</option>
-                {inventoryItems.map((item) => (
-                  <option key={item._id} value={item._id}>
-                    {item.name} ({item.unit})
-                  </option>
-                ))}
-              </select>
+            <div key={i} className="flex gap-2 items-start">
+              <ComponentItemPicker
+                items={inventoryItems}
+                categories={categories}
+                selectedId={comp.inventoryItemId}
+                onSelect={(id) => setComponentItem(i, id)}
+                onItemCreated={handleItemCreated}
+                onItemUpdated={handleItemUpdated}
+                onItemDeleted={handleItemDeleted}
+              />
               <input
                 type="number"
                 min="1"
                 value={comp.quantity}
-                onChange={(e) => updateComponent(i, 'quantity', Number(e.target.value))}
-                className="w-20 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+                onChange={(e) => setComponentQty(i, Number(e.target.value))}
+                className="w-20 flex-shrink-0 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center"
                 placeholder="Qty"
               />
               {components.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeComponent(i)}
-                  className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                  className="flex-shrink-0 p-2 text-slate-400 hover:text-red-500 transition-colors mt-0.5"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -175,6 +205,7 @@ export function ComboForm({ defaultValues, onSubmit, isSubmitting, error }: Comb
             </div>
           ))}
         </div>
+
         {componentError && <p className={errClass}>{componentError}</p>}
       </div>
 

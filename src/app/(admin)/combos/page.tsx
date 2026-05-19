@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Layers } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useCombos } from '@/hooks/useCombos';
 import { Alert } from '@/components/common/Alert';
 import { Spinner } from '@/components/common/Spinner';
@@ -9,7 +10,7 @@ import type { ICombo } from '@/types';
 import { useState } from 'react';
 
 function DeleteConfirmModal({ combo, onConfirm, onClose }: { combo: ICombo; onConfirm: () => void; onClose: () => void }) {
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[9999] animate-overlay">
       <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl animate-slide-in">
         <div className="flex items-center gap-3 mb-3">
@@ -37,7 +38,8 @@ function DeleteConfirmModal({ combo, onConfirm, onClose }: { combo: ICombo; onCo
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -42,10 +42,9 @@ export async function generatePDF(orderId: string): Promise<Buffer> {
 
     // ── Line items table ─────────────────────────────────────────
     const sym = branding.currencySymbol ?? '$';
-    doc.font('Helvetica-Bold').text('Item', 50, doc.y, { width: 250 });
-    doc.text('Qty', 300, doc.y - doc.currentLineHeight(), { width: 60, align: 'right' });
-    doc.text('Unit', 360, doc.y - doc.currentLineHeight(), { width: 80, align: 'right' });
-    doc.text('Subtotal', 440, doc.y - doc.currentLineHeight(), { width: 90, align: 'right' });
+    doc.font('Helvetica-Bold').text('Item', 50, doc.y, { width: 280 });
+    doc.text('Qty', 330, doc.y - doc.currentLineHeight(), { width: 60, align: 'right' });
+    doc.text('Subtotal', 390, doc.y - doc.currentLineHeight(), { width: 140, align: 'right' });
     doc.moveDown(0.3);
     doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
     doc.moveDown(0.3);
@@ -53,10 +52,9 @@ export async function generatePDF(orderId: string): Promise<Buffer> {
     doc.font('Helvetica');
     for (const item of order.items) {
       const y = doc.y;
-      doc.text(item.itemName, 50, y, { width: 250 });
-      doc.text(String(item.quantity), 300, y, { width: 60, align: 'right' });
-      doc.text(`${sym}${item.unitPrice.toFixed(2)}`, 360, y, { width: 80, align: 'right' });
-      doc.text(`${sym}${item.subtotal.toFixed(2)}`, 440, y, { width: 90, align: 'right' });
+      doc.text(item.itemName, 50, y, { width: 280 });
+      doc.text(String(item.quantity), 330, y, { width: 60, align: 'right' });
+      doc.text(`${sym}${item.subtotal.toFixed(2)}`, 390, y, { width: 140, align: 'right' });
       doc.moveDown(0.5);
     }
 
@@ -64,26 +62,26 @@ export async function generatePDF(orderId: string): Promise<Buffer> {
     doc.moveDown(0.5);
 
     // ── Totals ───────────────────────────────────────────────────
-    const rightX = 440;
-    doc.font('Helvetica').text('Subtotal:', 50, doc.y, { width: 390, align: 'right' });
+    const rightX = 390;
+    doc.font('Helvetica').text('Subtotal:', 50, doc.y, { width: 340, align: 'right' });
     doc.text(`${sym}${order.subtotal.toFixed(2)}`, rightX, doc.y - doc.currentLineHeight(), {
-      width: 90,
+      width: 140,
       align: 'right',
     });
     doc.moveDown(0.5);
 
     if (order.discountAmount > 0) {
-      doc.text('Discount:', 50, doc.y, { width: 390, align: 'right' });
+      doc.text('Discount:', 50, doc.y, { width: 340, align: 'right' });
       doc.text(`-${sym}${order.discountAmount.toFixed(2)}`, rightX, doc.y - doc.currentLineHeight(), {
-        width: 90,
+        width: 140,
         align: 'right',
       });
       doc.moveDown(0.5);
     }
 
-    doc.font('Helvetica-Bold').text('TOTAL:', 50, doc.y, { width: 390, align: 'right' });
+    doc.font('Helvetica-Bold').text('TOTAL:', 50, doc.y, { width: 340, align: 'right' });
     doc.text(`${sym}${order.total.toFixed(2)}`, rightX, doc.y - doc.currentLineHeight(), {
-      width: 90,
+      width: 140,
       align: 'right',
     });
     doc.moveDown(2);
